@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import manifest from '../data/frame-manifest.json';
+import { assetUrl } from '../lib/assetUrl';
 
 export interface FrameSetInfo {
   dir: string;
@@ -25,7 +26,7 @@ export interface FrameManifest {
 export const FRAME_MANIFEST = manifest as unknown as FrameManifest;
 
 export function frameUrl(dir: string, index: number): string {
-  return `${dir}/f${String(index + 1).padStart(4, '0')}.webp`;
+  return assetUrl(`${dir}/f${String(index + 1).padStart(4, '0')}.webp`);
 }
 
 const CONCURRENCY = 10;

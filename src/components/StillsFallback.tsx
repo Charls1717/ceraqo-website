@@ -1,4 +1,5 @@
 import { ZONES } from '../data/zones';
+import { assetUrl } from '../lib/assetUrl';
 import PostDive from './PostDive';
 
 /**
@@ -19,7 +20,7 @@ export default function StillsFallback() {
         <section key={zone.id} className="still" aria-label={zone.label}>
           <img
             className="still__img"
-            src={`/frames/stills/z${i + 1}.webp`}
+            src={assetUrl(`/frames/stills/z${i + 1}.webp`)}
             alt={`${zone.kicker} — zone ${i + 1} of the Q-ARMOR dive`}
             loading={i === 0 ? 'eager' : 'lazy'}
           />

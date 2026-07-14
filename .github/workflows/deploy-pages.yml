@@ -1,0 +1,50 @@
+name: deploy-pages
+
+# Manual-only deploy to GitHub Pages. Nothing is published automatically:
+# run this workflow by hand (Actions -> deploy-pages -> Run workflow) once
+# Pages is enabled for the repository (Settings -> Pages -> GitHub Actions).
+#
+# base_path: leave empty for a custom domain / root deployment; use
+# "/ceraqo-website/" for the default project-pages URL.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_path:
+        description: 'Vite base path (e.g. /ceraqo-website/ for project pages)'
+        required: false
+        default: '/ceraqo-website/'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build --base "${{ inputs.base_path || '/' }}"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

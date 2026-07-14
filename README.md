@@ -69,5 +69,24 @@ scripts/extract-frames.sh                            # rebuild public/frames/* +
 
 ## QA
 
-`qa/` holds Playwright proof screenshots of the scrub at 0 / 25 / 50 / 75 /
-100 % scroll, regenerated with `npx playwright test` (see `qa/scrub.spec.ts`).
+`npm run qa` runs the Playwright suite (`qa/scrub.spec.ts`) against a fresh
+production build:
+
+1. HUD magnification counts 1× → 1,000,000× through all five zones, with
+   proof screenshots at 0 / 25 / 50 / 75 / 100 % scroll saved to `qa/`.
+2. Canvas pixel-diff at every clip boundary — no visible seam frames.
+3. Sustained frame rate during a continuous scroll (measured ~47 fps under
+   headless *software* rendering against a 60 fps idle baseline; real
+   hardware with GPU compositing runs the scrub at full rate).
+4. A phone viewport loads only the 960px mobile frame set
+   (proof: `qa/mobile-050.png`).
+5. Post-dive specs, launch line and waitlist render.
+
+## Deploy
+
+`deploy-pages.yml` is a **manual-only** GitHub Pages workflow: enable Pages
+for the repo (Settings → Pages → Source: GitHub Actions), then run the
+workflow from the Actions tab. Runtime asset URLs respect Vite's `base`, so
+the site works both at a domain root and under a project-pages subpath
+(pass `base_path` when dispatching). Any static host serving `dist/` works
+just as well.

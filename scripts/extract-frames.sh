@@ -63,6 +63,28 @@ for i in "${!CLIPS[@]}"; do
      "public/frames/stills/z$((i + 1)).webp"
 done
 
+# Feather each clip boundary: Seedance re-encodes the chained start image
+# with a whisker of tonal drift, so blend the previous clip's final frame
+# into the first few frames of the next clip. The one-frame step becomes a
+# short morph and the joint scrubs invisibly.
+FEATHER_ALPHAS=(0.83 0.66 0.50 0.33 0.17)
+for i in 0 1 2 3; do
+  lastfile=$(printf 'f%04d.webp' $((ZEND[$i] + 1)))
+  for k in "${!FEATHER_ALPHAS[@]}"; do
+    a=${FEATHER_ALPHAS[$k]}
+    tgt=$(printf 'f%04d.webp' $((ZEND[$i] + 2 + k)))
+    for set in desktop:$DESKTOP_Q mobile:$MOBILE_Q; do
+      dir=${set%%:*}; q=${set##*:}
+      ffmpeg -hide_banner -loglevel error -y \
+        -i "public/frames/$dir/$tgt" -i "public/frames/$dir/$lastfile" \
+        -filter_complex "[0:v][1:v]blend=all_expr='A*(1-$a)+B*$a'" \
+        -c:v libwebp -quality "$q" "$TMP/feather.webp"
+      mv "$TMP/feather.webp" "public/frames/$dir/$tgt"
+    done
+  done
+  echo "   feathered boundary after frame $((ZEND[$i] + 1))"
+done
+
 cp public/frames/desktop/f0001.webp public/poster.webp
 
 # Probe output dimensions

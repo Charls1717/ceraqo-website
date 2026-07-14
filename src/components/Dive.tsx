@@ -27,6 +27,7 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
   const magRef = useRef<HTMLDivElement>(null);
   const depthRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
+  const hintRef = useRef<HTMLDivElement>(null);
   const zoneItemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const overlayRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -124,11 +125,11 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
       if (!el) return;
       const o = Math.min(1, Math.max(0, opacity));
       el.style.opacity = o.toFixed(3);
-      if (el.classList.contains('overlay--zone')) {
-        el.style.transform = `translateY(calc(-50% + ${shift.toFixed(1)}px))`;
-      } else {
-        el.style.transform = `translateY(${shift.toFixed(1)}px)`;
-      }
+      const centred =
+        el.classList.contains('overlay--zone') || el.classList.contains('overlay--hero');
+      el.style.transform = centred
+        ? `translateY(calc(-50% + ${shift.toFixed(1)}px))`
+        : `translateY(${shift.toFixed(1)}px)`;
       el.style.visibility = o <= 0.001 ? 'hidden' : 'visible';
     };
 
@@ -163,6 +164,7 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
       // Hero overlay: hold at the very top, gone by ~4.5% progress
       const heroOpacity = 1 - p / 0.045;
       setOverlay(heroRef.current, heroOpacity, -p * 300);
+      setOverlay(hintRef.current, heroOpacity, 0);
 
       // Zone facts: fade in after the zone starts, out before it ends
       overlayRefs.current.forEach((el, i) => {
@@ -216,10 +218,10 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
         <div ref={heroRef} className="overlay overlay--hero" style={{ opacity: 1 }}>
           <div className="overlay__kicker micro">CERAQO — surface protection</div>
           <h1 className="overlay__title">How close will you look?</h1>
-          <div className="overlay__hint">
-            <span className="micro">Scroll to descend</span>
-            <span className="overlay__hint-line" />
-          </div>
+        </div>
+        <div ref={hintRef} className="overlay overlay--hint" style={{ opacity: 1 }}>
+          <span className="micro">Scroll to descend</span>
+          <span className="overlay__hint-line" />
         </div>
 
         {/* Zone facts */}

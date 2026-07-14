@@ -10,13 +10,13 @@ export function Nav() {
         {/* Left: two nav columns */}
         <nav aria-label="Primary" className="hidden md:grid grid-cols-2 gap-x-8 text-[11px] tracking-[0.18em] uppercase text-[color:var(--muted-foreground)]">
           <ul className="space-y-1.5">
-            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#product">Product</a></li>
-            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#pricing">Pricing</a></li>
+            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#product">The dive</a></li>
+            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#specs">Specification</a></li>
             <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#faq">FAQ</a></li>
           </ul>
           <ul className="space-y-1.5">
-            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#how">How it works</a></li>
-            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#support">Support</a></li>
+            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#series">Series One</a></li>
+            <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#reserve">Reserve</a></li>
             <li><a className="hover:text-[color:var(--ink)] transition-colors" href="#contact">Contact</a></li>
           </ul>
         </nav>

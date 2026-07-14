@@ -9,8 +9,8 @@ export function Footer() {
           <span className="text-xs uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">Q-Armor · Series One</span>
         </div>
         <nav className="flex flex-wrap gap-x-8 gap-y-3 text-xs uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
-          <a href="#product" className="hover:text-[color:var(--ink)] transition">Product</a>
-          <a href="#how" className="hover:text-[color:var(--ink)] transition">How it works</a>
+          <a href="#product" className="hover:text-[color:var(--ink)] transition">The dive</a>
+          <a href="#specs" className="hover:text-[color:var(--ink)] transition">Specification</a>
           <a href="#faq" className="hover:text-[color:var(--ink)] transition">FAQ</a>
           <a href="#reserve" className="hover:text-[color:var(--ink)] transition">Reserve</a>
         </nav>

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { z } from "zod";
-import carHood from "@/assets/car_hood.png";
+import lattice from "@/assets/lattice.webp";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Enter your name").max(80),
@@ -51,8 +51,8 @@ export function Reserve() {
 
   return (
     <section id="reserve" className="relative min-h-[90vh] overflow-hidden flex items-center py-24">
-      <img src={carHood} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" aria-hidden />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.85))" }} />
+      <img src={lattice} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" aria-hidden />
+      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.62), rgba(0,0,0,0.88))" }} />
       <div className="relative z-10 w-full max-w-3xl mx-auto px-6 sm:px-12 text-center" style={{ color: "#F2EEF0" }}>
         <motion.h2
           initial={{ opacity: 0, y: 20 }}

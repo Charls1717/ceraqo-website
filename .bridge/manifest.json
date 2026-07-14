@@ -1,11 +1,9 @@
 {
   "branch": "higgsfield-assets",
   "items": [
+    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_101158_d327b097-54e8-46c4-8f9e-fb79262cf310.mp4", "out": "clip1_surface.mp4" },
+    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_100340_4b89ba17-703e-4b6f-929a-d55e3dc4cf0f.png", "out": "J5_lattice.png" },
     { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_084456_435329ae-6ce5-46a9-8d02-9ad9f30562d0.png", "out": "master_45.png" },
-    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_095137_68b08afe-7d36-4ed0-8e52-5b0b1901b077.png", "out": "J0_studio169.png" },
-    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_095712_934d922d-0831-4cd9-baad-e326edd55d2d.png", "out": "J1_drop.png" },
-    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_100336_518591b8-73ff-42ae-ad52-742535bcad4a.png", "out": "J2_contact.png" },
-    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_100438_f2bff0e6-5760-4b3f-9784-a44d1d5527d5.png", "out": "J3_inside.png" },
-    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_100340_4b89ba17-703e-4b6f-929a-d55e3dc4cf0f.png", "out": "J5_lattice.png" }
+    { "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FgGv6fsXZiRt87znkVYdbfwWdb/hf_20260714_095716_56fcf10c-551d-4cef-a05f-baab28a0fd60.png", "out": "J4_bond.png" }
   ]
 }

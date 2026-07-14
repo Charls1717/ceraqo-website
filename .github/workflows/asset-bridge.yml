@@ -17,6 +17,14 @@ on:
         description: 'JSON array of {file, put_url, content_type} to PUT from the repo'
         required: false
         default: '[]'
+      deploy_pages:
+        description: 'Set "true" to build and deploy the site to GitHub Pages'
+        required: false
+        default: 'false'
+      base_path:
+        description: 'Vite base path for the Pages build'
+        required: false
+        default: '/ceraqo-website/'
 
 permissions:
   contents: write
@@ -26,7 +34,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Optional Pages deployment (dispatch with deploy_pages=true). Lives here
+  # rather than in deploy-pages.yml because workflow_dispatch only registers
+  # workflows present on the repo's default branch.
+  pages:
+    if: ${{ inputs.deploy_pages == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build --base "${{ inputs.base_path || '/' }}"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
   bridge:
+    if: ${{ inputs.deploy_pages != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

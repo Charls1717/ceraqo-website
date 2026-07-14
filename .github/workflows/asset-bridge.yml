@@ -1,26 +1,23 @@
 # Asset bridge: downloads generated media (Higgsfield CDN) on a runner with
 # open egress and force-pushes it to a scratch branch this session can fetch.
 # The scratch branch is disposable — it never merges into site branches.
+#
+# Trigger: commit a new .bridge/manifest.json (or use workflow_dispatch).
+# Manifest shape:
+#   { "branch": "higgsfield-assets",
+#     "items": [{ "url": "https://…", "out": "file.png" }, …],
+#     "put": { "url": "https://presigned…", "file": "frame.png" } }   # optional
 name: asset-bridge
 
 on:
+  push:
+    paths:
+      - ".bridge/manifest.json"
   workflow_dispatch:
     inputs:
       manifest:
-        description: "JSON array of {url, out} download jobs"
+        description: "JSON object matching .bridge/manifest.json shape"
         required: true
-      branch:
-        description: "Scratch branch to receive the files"
-        required: false
-        default: "higgsfield-assets"
-      put_url:
-        description: "Optional presigned PUT URL (upload out/<put_file> after downloads)"
-        required: false
-        default: ""
-      put_file:
-        description: "File name inside out/ to PUT to put_url"
-        required: false
-        default: ""
 
 permissions:
   contents: write
@@ -29,36 +26,47 @@ jobs:
   bridge:
     runs-on: ubuntu-latest
     steps:
-      - name: Download manifest entries
+      - uses: actions/checkout@v4
+
+      - name: Resolve manifest
         env:
-          MANIFEST: ${{ inputs.manifest }}
+          DISPATCH_MANIFEST: ${{ inputs.manifest }}
         run: |
-          mkdir -p out
-          echo "$MANIFEST" | jq -c '.[]' | while read -r item; do
+          if [ -n "$DISPATCH_MANIFEST" ]; then
+            echo "$DISPATCH_MANIFEST" > /tmp/manifest.json
+          else
+            cp .bridge/manifest.json /tmp/manifest.json
+          fi
+          jq . /tmp/manifest.json
+
+      - name: Download manifest items
+        run: |
+          mkdir -p /tmp/out
+          jq -c '.items[]' /tmp/manifest.json | while read -r item; do
             url=$(echo "$item" | jq -r '.url')
             name=$(echo "$item" | jq -r '.out')
             echo "fetching $name"
-            curl -fSL --retry 3 --retry-delay 2 -o "out/$name" "$url"
+            curl -fSL --retry 3 --retry-delay 2 -o "/tmp/out/$name" "$url"
           done
-          ls -la out/
+          ls -la /tmp/out/
 
       - name: Optional presigned PUT
-        if: ${{ inputs.put_url != '' && inputs.put_file != '' }}
-        env:
-          PUT_URL: ${{ inputs.put_url }}
-          PUT_FILE: ${{ inputs.put_file }}
         run: |
-          curl -fSL -X PUT --upload-file "out/$PUT_FILE" "$PUT_URL"
+          put_url=$(jq -r '.put.url // empty' /tmp/manifest.json)
+          put_file=$(jq -r '.put.file // empty' /tmp/manifest.json)
+          if [ -n "$put_url" ] && [ -n "$put_file" ]; then
+            curl -fSL -X PUT --upload-file "/tmp/out/$put_file" "$put_url"
+          fi
 
       - name: Force-push to scratch branch
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ inputs.branch }}
         run: |
-          cd out
-          git init -b "$BRANCH"
+          branch=$(jq -r '.branch // "higgsfield-assets"' /tmp/manifest.json)
+          cd /tmp/out
+          git init -b "$branch"
           git config user.email "actions@users.noreply.github.com"
           git config user.name "asset-bridge"
           git add -A
           git commit -m "asset drop $(date -u +%Y%m%dT%H%M%SZ)"
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/$BRANCH"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/$branch"

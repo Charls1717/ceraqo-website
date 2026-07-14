@@ -13,13 +13,17 @@ const manifest: Manifest = JSON.parse(
 
 const ZONE_LABELS = ['OBJECT', 'DROP', 'SPREAD', 'BOND', 'LATTICE'];
 
-/** Expected HUD readouts at the five proof stops (log scale 1 -> 1e6). */
-const STOPS: { p: number; mag: string }[] = [
-  { p: 0.0, mag: '1.0×' },
-  { p: 0.25, mag: '32×' },
-  { p: 0.5, mag: '1,000×' },
-  { p: 0.75, mag: '31,623×' },
-  { p: 1.0, mag: '1,000,000×' },
+/**
+ * Expected HUD readouts at the five proof stops (log scale 1 -> 1e6).
+ * The endpoints are clamped and asserted exactly; the mid stops get a
+ * tolerance because a single scroll pixel shifts 10^(6p) measurably.
+ */
+const STOPS: { p: number; mag: number; exact?: string }[] = [
+  { p: 0.0, mag: 1, exact: '1.0×' },
+  { p: 0.25, mag: 31.6 },
+  { p: 0.5, mag: 1_000 },
+  { p: 0.75, mag: 31_623 },
+  { p: 1.0, mag: 1_000_000, exact: '1,000,000×' },
 ];
 
 async function waitForStart(page: Page) {
@@ -74,8 +78,14 @@ test('dive scrub: HUD counts through every zone and proof screenshots land', asy
 
   for (const stop of STOPS) {
     await scrubTo(page, stop.p);
-    const mag = await page.locator('.hud__mag').textContent();
-    expect(mag?.trim()).toBe(stop.mag);
+    const magText = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
+    if (stop.exact) {
+      expect(magText).toBe(stop.exact);
+    } else {
+      const value = Number(magText.replace(/[×,]/g, ''));
+      expect(value, `HUD read ${magText} at ${stop.p * 100}%`).toBeGreaterThan(stop.mag * 0.94);
+      expect(value, `HUD read ${magText} at ${stop.p * 100}%`).toBeLessThan(stop.mag * 1.06);
+    }
     const pct = String(Math.round(stop.p * 100)).padStart(3, '0');
     await page.screenshot({ path: `qa/scrub-${pct}.png` });
   }

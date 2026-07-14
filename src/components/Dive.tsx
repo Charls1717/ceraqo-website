@@ -210,6 +210,7 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
         <canvas ref={canvasRef} className="dive-canvas" aria-hidden="true" />
         <div className="dive-grade" />
         <div className="dive-vignette" />
+        <div className="dive-grain" />
 
         {/* Hero overlay */}
         <div ref={heroRef} className="overlay overlay--hero" style={{ opacity: 1 }}>

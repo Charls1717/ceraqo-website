@@ -199,6 +199,20 @@ test.describe('mobile', () => {
   });
 });
 
+test('hud rail: clicking a zone glides the dive to that zone', async ({ page }) => {
+  await waitForStart(page);
+
+  await page.getByRole('button', { name: /Jump to zone 4/ }).click();
+  // Lenis glide is 2.6s; give it time to arrive and settle
+  await page.waitForTimeout(3400);
+
+  const active = (await page.locator('.hud__zone[data-active="true"]').textContent())?.trim();
+  expect(active).toBe('BOND');
+  // Zone 4 entry (frame 303 of 484) sits at 10^3.76 ≈ 5,700x
+  const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
+  expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(4_000);
+});
+
 test('post-dive: specs, launch line and waitlist render', async ({ page }) => {
   await waitForStart(page);
   await page.evaluate(() => {

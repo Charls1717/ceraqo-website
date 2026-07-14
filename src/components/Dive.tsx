@@ -28,13 +28,31 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
   const depthRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
-  const zoneItemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const zoneItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const overlayRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const trackHeight = useMemo(
     () => `calc(${Math.max(count * PX_PER_FRAME, 4800)}px + 100vh)`,
     [count],
   );
+
+  /** Glide the page so the scrub lands a beat into the given zone. */
+  const jumpToZone = (zoneIndex: number) => {
+    const track = trackRef.current;
+    if (!track || count === 0) return;
+    const z = zones[zoneIndex];
+    const targetFrame = Math.min(z.start + 12, z.end);
+    const p = targetFrame / Math.max(count - 1, 1);
+    const max = track.offsetTop + track.offsetHeight - window.innerHeight;
+    const lenis = (
+      window as unknown as {
+        __lenis?: { scrollTo: (t: number, o?: object) => void };
+      }
+    ).__lenis;
+    const target = Math.round(p * max);
+    if (lenis) lenis.scrollTo(target, { duration: 2.6 });
+    else window.scrollTo(0, target);
+  };
 
   /** Zone frame ranges normalised to overall progress [0, 1]. */
   const zoneWindows = useMemo(() => {
@@ -290,16 +308,19 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
 
           <div className="hud__rail">
             {ZONES.map((zone, i) => (
-              <div
+              <button
                 key={zone.id}
+                type="button"
                 ref={(el) => {
                   zoneItemRefs.current[i] = el;
                 }}
                 className="hud__zone"
                 data-active={i === 0 ? 'true' : 'false'}
+                aria-label={`Jump to zone ${i + 1} — ${zone.kicker}`}
+                onClick={() => jumpToZone(i)}
               >
                 {zone.label}
-              </div>
+              </button>
             ))}
           </div>
         </div>

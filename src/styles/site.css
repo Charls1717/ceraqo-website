@@ -205,6 +205,8 @@
   flex-direction: column;
   gap: 1.35rem;
   align-items: flex-end;
+  /* the HUD itself is inert; the rail is navigation */
+  pointer-events: auto;
 }
 
 .hud__zone {
@@ -216,6 +218,14 @@
   color: var(--c-text-dim);
   text-transform: uppercase;
   transition: color 0.4s;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hud__zone:hover {
+  color: var(--c-text-mid);
 }
 
 .hud__zone::after {

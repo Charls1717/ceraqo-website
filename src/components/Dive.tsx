@@ -136,8 +136,30 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
     let lastZone = -1;
     let lastMagText = '';
 
+    // Pre-decode frames just ahead of the scrub so drawImage never has to
+    // block on a cold WebP decode mid-scroll.
+    const decodeRequested = new Set<number>();
+    let prevIndex = 0;
+    const LOOKAHEAD = 14;
+    const decodeAhead = (from: number, direction: 1 | -1) => {
+      const images = imagesRef.current ?? [];
+      for (let d = 1; d <= LOOKAHEAD; d++) {
+        const i = from + d * direction;
+        if (i < 0 || i >= count || decodeRequested.has(i)) continue;
+        decodeRequested.add(i);
+        images[i]?.decode().catch(() => {
+          // Re-request later if the decoded data was evicted
+          decodeRequested.delete(i);
+        });
+      }
+    };
+
     const update = (p: number) => {
       targetIndex = Math.round(p * (count - 1));
+      if (targetIndex !== prevIndex) {
+        decodeAhead(targetIndex, targetIndex > prevIndex ? 1 : -1);
+        prevIndex = targetIndex;
+      }
 
       // Magnification counter
       const magText = formatMagnification(magnificationAt(p));

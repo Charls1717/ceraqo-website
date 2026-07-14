@@ -7,6 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 interface Manifest {
   desktop: { count: number };
+  mobile: { count: number };
   zones: { id: string; start: number; end: number }[];
 }
 
@@ -125,6 +126,77 @@ test('dive scrub: no visible seam at any clip boundary', async ({ page }) => {
       `seam between clip ${i + 1} and clip ${i + 2} (mean abs channel diff ${diff.toFixed(2)})`,
     ).toBeLessThan(8);
   }
+});
+
+test('dive scrub: sustained frame rate during continuous scroll', async ({ page }) => {
+  await waitForStart(page);
+
+  // Warm pass: visit the whole sequence once so HTTP + decode caches are
+  // primed, the way a real visitor scrolls the dive gradually rather than
+  // sprinting 400 frames in four seconds.
+  await scrubTo(page, 1);
+  await page.waitForTimeout(800);
+  await scrubTo(page, 0);
+  await page.waitForTimeout(400);
+
+  const fps = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const lenis = (window as unknown as { __lenis?: { scrollTo: (t: number, o: object) => void } })
+          .__lenis;
+        const track = document.querySelector<HTMLElement>('.dive-track')!;
+        const max = track.offsetTop + track.offsetHeight - window.innerHeight;
+        const durationMs = 4000;
+        lenis?.scrollTo(max * 0.85, {
+          duration: durationMs / 1000,
+          easing: (t: number) => t,
+        });
+        let count = 0;
+        let start = 0;
+        const tick = (ts: number) => {
+          if (!start) start = ts;
+          count++;
+          if (ts - start < durationMs) requestAnimationFrame(tick);
+          else resolve(count / ((ts - start) / 1000));
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+
+  console.log(`measured scrub frame rate: ${fps.toFixed(1)} fps (headless software rendering)`);
+  // This container rasterizes in software and shares CPU, so the absolute
+  // number underestimates real hardware; the floor exists to catch genuine
+  // regressions (e.g. accidental per-frame React re-renders), not to prove
+  // 60fps — the idle baseline here is 60fps and drawing is on-change only.
+  expect(fps).toBeGreaterThan(30);
+
+  // The canvas must actually have advanced deep into the dive
+  const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
+  expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(10_000);
+});
+
+test.describe('mobile', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('phones load the lighter mobile frame set and scrub correctly', async ({ page }) => {
+    const frameRequests: string[] = [];
+    page.on('request', (req) => {
+      const url = req.url();
+      if (url.includes('/frames/')) frameRequests.push(url);
+    });
+
+    await waitForStart(page);
+
+    const mobileHits = frameRequests.filter((u) => u.includes('/frames/mobile/')).length;
+    const desktopHits = frameRequests.filter((u) => u.includes('/frames/desktop/')).length;
+    expect(mobileHits).toBe(manifest.mobile.count);
+    expect(desktopHits).toBe(0);
+
+    await scrubTo(page, 0.5);
+    const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
+    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(500);
+    await page.screenshot({ path: 'qa/mobile-050.png' });
+  });
 });
 
 test('post-dive: specs, launch line and waitlist render', async ({ page }) => {

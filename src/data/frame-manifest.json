@@ -1,0 +1,14 @@
+{
+  "generated": false,
+  "note": "Placeholder until scripts/extract-frames.sh writes the real manifest from the five source clips.",
+  "desktop": { "dir": "/frames/desktop", "width": 1600, "height": 900, "count": 0 },
+  "mobile": { "dir": "/frames/mobile", "width": 960, "height": 540, "count": 0 },
+  "stills": { "dir": "/frames/stills" },
+  "zones": [
+    { "id": "object", "start": 0, "end": 0 },
+    { "id": "drop", "start": 0, "end": 0 },
+    { "id": "spread", "start": 0, "end": 0 },
+    { "id": "bond", "start": 0, "end": 0 },
+    { "id": "lattice", "start": 0, "end": 0 }
+  ]
+}

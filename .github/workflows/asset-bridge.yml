@@ -1,26 +1,29 @@
-# Asset bridge: downloads generated media (Higgsfield CDN) on a runner with
-# open egress and force-pushes it to a scratch branch this session can fetch.
-# The scratch branch is disposable — it never merges into site branches.
-#
-# Trigger: commit a new .bridge/manifest.json (or use workflow_dispatch).
-# Manifest shape:
-#   { "branch": "higgsfield-assets",
-#     "items": [{ "url": "https://…", "out": "file.png" }, …],
-#     "put": { "url": "https://presigned…", "file": "frame.png" } }   # optional
 name: asset-bridge
 
+# Transfers media between Higgsfield storage and this repo. The Claude session
+# container has restricted egress, so a GitHub runner does the byte moving:
+#   downloads: [{"url": "https://...", "path": "bridge/out/clip1.mp4"}]
+#   uploads:   [{"file": "bridge/up/frame.jpg", "put_url": "https://...", "content_type": "image/jpeg"}]
+# Downloaded files are committed back to the same branch.
+
 on:
-  push:
-    paths:
-      - ".bridge/manifest.json"
   workflow_dispatch:
     inputs:
-      manifest:
-        description: "JSON object matching .bridge/manifest.json shape"
-        required: true
+      downloads:
+        description: 'JSON array of {url, path} to fetch and commit'
+        required: false
+        default: '[]'
+      uploads:
+        description: 'JSON array of {file, put_url, content_type} to PUT from the repo'
+        required: false
+        default: '[]'
 
 permissions:
   contents: write
+
+concurrency:
+  group: asset-bridge-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   bridge:
@@ -28,45 +31,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve manifest
+      - name: Upload files to presigned URLs
         env:
-          DISPATCH_MANIFEST: ${{ inputs.manifest }}
+          UPLOADS: ${{ inputs.uploads }}
         run: |
-          if [ -n "$DISPATCH_MANIFEST" ]; then
-            echo "$DISPATCH_MANIFEST" > /tmp/manifest.json
-          else
-            cp .bridge/manifest.json /tmp/manifest.json
-          fi
-          jq . /tmp/manifest.json
+          python3 - <<'PY'
+          import json, os, subprocess
+          items = json.loads(os.environ["UPLOADS"] or "[]")
+          for it in items:
+              print("PUT", it["file"], flush=True)
+              subprocess.run([
+                  "curl", "-sS", "--fail", "--retry", "3", "--retry-delay", "2",
+                  "-X", "PUT",
+                  "-H", "Content-Type: " + it.get("content_type", "application/octet-stream"),
+                  "--data-binary", "@" + it["file"],
+                  it["put_url"],
+              ], check=True)
+          print("uploads done:", len(items))
+          PY
 
-      - name: Download manifest items
-        run: |
-          mkdir -p /tmp/out
-          jq -c '.items[]' /tmp/manifest.json | while read -r item; do
-            url=$(echo "$item" | jq -r '.url')
-            name=$(echo "$item" | jq -r '.out')
-            echo "fetching $name"
-            curl -fSL --retry 3 --retry-delay 2 -o "/tmp/out/$name" "$url"
-          done
-          ls -la /tmp/out/
-
-      - name: Optional presigned PUT
-        run: |
-          put_url=$(jq -r '.put.url // empty' /tmp/manifest.json)
-          put_file=$(jq -r '.put.file // empty' /tmp/manifest.json)
-          if [ -n "$put_url" ] && [ -n "$put_file" ]; then
-            curl -fSL -X PUT --upload-file "/tmp/out/$put_file" "$put_url"
-          fi
-
-      - name: Force-push to scratch branch
+      - name: Download files
         env:
-          GH_TOKEN: ${{ github.token }}
+          DOWNLOADS: ${{ inputs.downloads }}
         run: |
-          branch=$(jq -r '.branch // "higgsfield-assets"' /tmp/manifest.json)
-          cd /tmp/out
-          git init -b "$branch"
-          git config user.email "actions@users.noreply.github.com"
+          python3 - <<'PY'
+          import json, os, subprocess
+          items = json.loads(os.environ["DOWNLOADS"] or "[]")
+          for it in items:
+              d = os.path.dirname(it["path"])
+              if d:
+                  os.makedirs(d, exist_ok=True)
+              print("GET ->", it["path"], flush=True)
+              subprocess.run([
+                  "curl", "-sSL", "--fail", "--retry", "3", "--retry-delay", "2",
+                  "-o", it["path"], it["url"],
+              ], check=True)
+              print(it["path"], os.path.getsize(it["path"]), "bytes")
+          print("downloads done:", len(items))
+          PY
+
+      - name: Commit downloaded files
+        run: |
           git config user.name "asset-bridge"
-          git add -A
-          git commit -m "asset drop $(date -u +%Y%m%dT%H%M%SZ)"
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/$branch"
+          git config user.email "asset-bridge@users.noreply.github.com"
+          git add -A bridge/ 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m "bridge: fetched assets"
+            for i in 1 2 3; do
+              git push origin "HEAD:${GITHUB_REF_NAME}" && break
+              git pull --rebase origin "${GITHUB_REF_NAME}"
+            done
+          fi

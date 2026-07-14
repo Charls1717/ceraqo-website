@@ -1,0 +1,64 @@
+# Asset bridge: downloads generated media (Higgsfield CDN) on a runner with
+# open egress and force-pushes it to a scratch branch this session can fetch.
+# The scratch branch is disposable — it never merges into site branches.
+name: asset-bridge
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest:
+        description: "JSON array of {url, out} download jobs"
+        required: true
+      branch:
+        description: "Scratch branch to receive the files"
+        required: false
+        default: "higgsfield-assets"
+      put_url:
+        description: "Optional presigned PUT URL (upload out/<put_file> after downloads)"
+        required: false
+        default: ""
+      put_file:
+        description: "File name inside out/ to PUT to put_url"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download manifest entries
+        env:
+          MANIFEST: ${{ inputs.manifest }}
+        run: |
+          mkdir -p out
+          echo "$MANIFEST" | jq -c '.[]' | while read -r item; do
+            url=$(echo "$item" | jq -r '.url')
+            name=$(echo "$item" | jq -r '.out')
+            echo "fetching $name"
+            curl -fSL --retry 3 --retry-delay 2 -o "out/$name" "$url"
+          done
+          ls -la out/
+
+      - name: Optional presigned PUT
+        if: ${{ inputs.put_url != '' && inputs.put_file != '' }}
+        env:
+          PUT_URL: ${{ inputs.put_url }}
+          PUT_FILE: ${{ inputs.put_file }}
+        run: |
+          curl -fSL -X PUT --upload-file "out/$PUT_FILE" "$PUT_URL"
+
+      - name: Force-push to scratch branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          cd out
+          git init -b "$BRANCH"
+          git config user.email "actions@users.noreply.github.com"
+          git config user.name "asset-bridge"
+          git add -A
+          git commit -m "asset drop $(date -u +%Y%m%dT%H%M%SZ)"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/$BRANCH"

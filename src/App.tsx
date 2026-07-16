@@ -5,62 +5,24 @@ import Lenis from 'lenis';
 import Dive from './components/Dive';
 import Preloader from './components/Preloader';
 import PostDive from './components/PostDive';
-import StillsFallback from './components/StillsFallback';
 import { useFrameLoader } from './hooks/useFrameLoader';
 import './styles/site.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
-type LegacyMediaQueryList = MediaQueryList & {
-  addListener?: (cb: () => void) => void;
-  removeListener?: (cb: () => void) => void;
-};
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)') as LegacyMediaQueryList;
-    const onChange = () => setReduced(mq.matches);
-    // Older Safari only has addListener/removeListener
-    if (mq.addEventListener) mq.addEventListener('change', onChange);
-    else mq.addListener?.(onChange);
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', onChange);
-      else mq.removeListener?.(onChange);
-    };
-  }, []);
-  return reduced;
-}
-
-function readFullOverride(): boolean {
-  try {
-    return sessionStorage.getItem('ceraqo-play-full') === '1';
-  } catch {
-    return false;
-  }
-}
-
 export default function App() {
-  const prefersReduced = usePrefersReducedMotion();
-  // Owners and curious visitors can opt out of the stills fallback
-  const [playFull, setPlayFull] = useState(readFullOverride);
-  const reducedMotion = prefersReduced && !playFull;
-
   // Pick the frame set once per load: phones get the lighter set.
   const profile = useMemo<'desktop' | 'mobile'>(
     () => (window.matchMedia('(max-width: 820px)').matches ? 'mobile' : 'desktop'),
     [],
   );
 
-  const { imagesRef, progress, ready } = useFrameLoader(profile, !reducedMotion);
+  const { imagesRef, progress, ready } = useFrameLoader(profile, true);
   const [started, setStarted] = useState(false);
   const diag = useMemo(() => new URLSearchParams(window.location.search).has('diag'), []);
 
   // Lenis smooth scroll, wired into GSAP's ticker
   useEffect(() => {
-    if (reducedMotion) return;
     const lenis = new Lenis({ smoothWheel: true, duration: 1.05 });
     lenis.on('scroll', ScrollTrigger.update);
     const raf = (time: number) => lenis.raf(time * 1000);
@@ -73,7 +35,7 @@ export default function App() {
       lenis.destroy();
       delete (window as unknown as { __lenis?: Lenis }).__lenis;
     };
-  }, [reducedMotion]);
+  }, []);
 
   // Release the scroll once frames are decoded
   useEffect(() => {
@@ -90,7 +52,7 @@ export default function App() {
   // Failsafe: the page must never stay scroll-locked, even if the frame
   // preload wedges on a flaky connection.
   useEffect(() => {
-    if (reducedMotion || started) return;
+    if (started) return;
     const t = window.setTimeout(() => {
       setStarted(true);
       const lenis = (window as unknown as { __lenis?: Lenis }).__lenis;
@@ -98,46 +60,20 @@ export default function App() {
       ScrollTrigger.refresh();
     }, 25000);
     return () => window.clearTimeout(t);
-  }, [reducedMotion, started]);
-
-  const enableFull = () => {
-    try {
-      sessionStorage.setItem('ceraqo-play-full', '1');
-    } catch {
-      /* opt-in still applies for this page view */
-    }
-    setPlayFull(true);
-  };
-
-  if (reducedMotion) {
-    return (
-      <>
-        <StillsFallback onPlayFull={enableFull} />
-        {diag && <Diag profile={profile} progress={0} ready={false} started={false} reduced />}
-      </>
-    );
-  }
+  }, [started]);
 
   return (
     <>
       <Preloader progress={progress} done={started} />
       <Dive imagesRef={imagesRef} profile={profile} active={started} />
       <PostDive />
-      {diag && (
-        <Diag profile={profile} progress={progress} ready={ready} started={started} reduced={false} />
-      )}
+      {diag && <Diag profile={profile} progress={progress} ready={ready} started={started} />}
     </>
   );
 }
 
 /** Tiny on-page readout for remote debugging: append ?diag to the URL. */
-function Diag(props: {
-  profile: string;
-  progress: number;
-  ready: boolean;
-  started: boolean;
-  reduced: boolean;
-}) {
+function Diag(props: { profile: string; progress: number; ready: boolean; started: boolean }) {
   const [scroll, setScroll] = useState(0);
   useEffect(() => {
     const read = () => setScroll(Math.round(window.scrollY));
@@ -165,9 +101,8 @@ function Diag(props: {
     >
       ua: {navigator.userAgent.slice(0, 72)}
       <br />
-      profile {props.profile} · reduced-motion {String(props.reduced)} · frames{' '}
-      {Math.round(props.progress * 100)}% · ready {String(props.ready)} · started{' '}
-      {String(props.started)}
+      profile {props.profile} · frames {Math.round(props.progress * 100)}% · ready{' '}
+      {String(props.ready)} · started {String(props.started)}
       <br />
       scrollY {scroll} · sticky {CSS.supports('position', 'sticky') ? 'ok' : 'UNSUPPORTED'} · svh{' '}
       {CSS.supports('height', '100svh') ? 'ok' : 'no'}

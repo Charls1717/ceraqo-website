@@ -61,11 +61,13 @@ scripts/extract-frames.sh                            # rebuild public/frames/* +
 
 ## Accessibility & performance
 
-- `prefers-reduced-motion`: no scrub, no smooth scroll — curated stills with
-  the same facts.
+- The scrubbed dive is the site, for every visitor — by the owner's
+  decision there is no reduced-motion alternate page. (The scrub is
+  scroll-driven: nothing moves unless the visitor scrolls.)
 - Canvas draws only when the frame index changes and only while in view.
 - HUD counters write straight to the DOM from the scroll callback; no React
   re-renders inside the dive.
+- Append `?diag` to the URL for an on-page debug readout.
 
 ## QA
 

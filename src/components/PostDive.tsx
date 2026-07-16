@@ -31,26 +31,13 @@ const SPECS = [
   },
 ];
 
-interface PostDiveProps {
-  animate?: boolean;
-}
-
-export default function PostDive({ animate = true }: PostDiveProps) {
+export default function PostDive() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!animate) {
-      rootRef.current
-        ?.querySelectorAll<HTMLElement>('.reveal')
-        .forEach((el) => {
-          el.style.opacity = '1';
-          el.style.transform = 'none';
-        });
-      return;
-    }
     const ctx = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>('.reveal').forEach((el) => {
         gsap.to(el, {
@@ -66,7 +53,7 @@ export default function PostDive({ animate = true }: PostDiveProps) {
       });
     }, rootRef);
     return () => ctx.revert();
-  }, [animate]);
+  }, []);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

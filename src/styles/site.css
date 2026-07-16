@@ -650,3 +650,22 @@
   gap: 1.4rem;
   padding: 0 6vw;
 }
+
+.stills-play {
+  margin-top: 0.6rem;
+  background: transparent;
+  border: 1px solid var(--c-cyan-dim);
+  color: var(--c-cyan);
+  padding: 0.85rem 1.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+
+.stills-play:hover {
+  background: var(--c-cyan);
+  color: #04211f;
+}

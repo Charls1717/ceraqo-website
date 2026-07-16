@@ -2,18 +2,28 @@ import { ZONES } from '../data/zones';
 import { assetUrl } from '../lib/assetUrl';
 import PostDive from './PostDive';
 
+interface StillsFallbackProps {
+  /** Lets reduced-motion visitors opt into the full scrubbed dive. */
+  onPlayFull?: () => void;
+}
+
 /**
  * prefers-reduced-motion experience: the five zones as curated stills
  * with the same datasheet facts — no scrubbing, no pinning, no smooth
  * scroll.
  */
-export default function StillsFallback() {
+export default function StillsFallback({ onPlayFull }: StillsFallbackProps) {
   return (
     <div className="stills">
       <header className="stills-hero">
         <div className="overlay__kicker micro">CERAQO — surface protection</div>
         <h1 className="overlay__title">How close will you look?</h1>
         <p className="micro">Q-ARMOR — the dive, in five stills</p>
+        {onPlayFull && (
+          <button type="button" className="stills-play" onClick={onPlayFull}>
+            Play the full animated dive
+          </button>
+        )}
       </header>
 
       {ZONES.map((zone, i) => (

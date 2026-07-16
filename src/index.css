@@ -54,7 +54,10 @@ body {
 }
 
 body {
+  /* clip, not hidden: hidden turns body into a scroll container in WebKit
+     and silently breaks position:sticky pinning on iOS */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 img,

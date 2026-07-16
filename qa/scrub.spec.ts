@@ -213,6 +213,24 @@ test('hud rail: clicking a zone glides the dive to that zone', async ({ page }) 
   expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(4_000);
 });
 
+test.describe('reduced motion', () => {
+  test('stills fallback renders and the Play-full opt-in boots the dive', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await expect(page.locator('.still')).toHaveCount(5);
+    await page.getByRole('button', { name: 'Play the full animated dive' }).click();
+    // Under reduced-motion the loader fade is instant, so wait for
+    // attachment rather than visibility.
+    await page.waitForSelector('.loader[data-done="true"]', {
+      state: 'attached',
+      timeout: 120_000,
+    });
+    await scrubTo(page, 0.5);
+    const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
+    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(500);
+  });
+});
+
 test('post-dive: specs, launch line and waitlist render', async ({ page }) => {
   await waitForStart(page);
   await page.evaluate(() => {

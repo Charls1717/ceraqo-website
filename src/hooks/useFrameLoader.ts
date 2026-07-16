@@ -31,10 +31,19 @@ export function frameUrl(dir: string, index: number): string {
 
 const CONCURRENCY = 10;
 
+declare global {
+  interface Window {
+    /** loading telemetry, also used by the QA suite */
+    __frameLoadState?: { loaded: number; total: number };
+  }
+}
+
 /**
- * Preloads the full frame sequence for the given profile, reporting
- * progress in [0, 1]. Images land in a stable ref array so consumers
- * can draw without re-rendering.
+ * Preloads the frame sequence for the given profile in two phases:
+ * the loader blocks only until the first zone (plus a spill margin) is
+ * decoded, then the page opens while the rest streams in scroll order.
+ * Images land in a stable ref array so consumers can draw without
+ * re-rendering.
  */
 export function useFrameLoader(profile: 'desktop' | 'mobile', enabled: boolean) {
   const [progress, setProgress] = useState(0);
@@ -49,6 +58,7 @@ export function useFrameLoader(profile: 'desktop' | 'mobile', enabled: boolean) 
     const count = info.count;
     const images: (HTMLImageElement | undefined)[] = new Array(count);
     imagesRef.current = images;
+    window.__frameLoadState = { loaded: 0, total: count };
 
     if (count === 0) {
       setProgress(1);
@@ -56,8 +66,14 @@ export function useFrameLoader(profile: 'desktop' | 'mobile', enabled: boolean) 
       return;
     }
 
+    // Block the loader on the OBJECT zone plus a spill into DROP; the
+    // rest streams in while the visitor is still at the top.
+    const firstZoneEnd = FRAME_MANIFEST.zones[0]?.end ?? count - 1;
+    const blockUntil = Math.min(count, firstZoneEnd + 33);
+
     let loaded = 0;
     let cursor = 0;
+    let readyFired = false;
 
     const loadOne = (index: number) =>
       new Promise<void>((resolve) => {
@@ -74,20 +90,32 @@ export function useFrameLoader(profile: 'desktop' | 'mobile', enabled: boolean) 
         img.src = frameUrl(info.dir, index);
       });
 
+    const bump = () => {
+      loaded++;
+      if (window.__frameLoadState) window.__frameLoadState.loaded = loaded;
+      if (!readyFired) {
+        if (loaded === blockUntil || loaded % 4 === 0) {
+          setProgress(Math.min(1, loaded / blockUntil));
+        }
+        if (loaded >= blockUntil) {
+          readyFired = true;
+          setProgress(1);
+          setReady(true);
+        }
+      }
+    };
+
     const worker = async () => {
       while (!cancelled) {
         const index = cursor++;
         if (index >= count) return;
         await loadOne(index);
-        loaded++;
-        if (loaded === count || loaded % 5 === 0) {
-          setProgress(loaded / count);
-        }
+        bump();
       }
     };
 
     Promise.all(Array.from({ length: CONCURRENCY }, worker)).then(() => {
-      if (!cancelled) {
+      if (!cancelled && !readyFired) {
         setProgress(1);
         setReady(true);
       }

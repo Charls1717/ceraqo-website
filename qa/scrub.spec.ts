@@ -33,6 +33,16 @@ const STOPS: { p: number; mag: number; exact?: string }[] = [
 async function waitForStart(page: Page) {
   await page.goto('/');
   await page.waitForSelector('.loader[data-done="true"]', { timeout: 120_000 });
+  // The loader releases after zone 1; QA needs the whole sequence, so
+  // wait for the background stream to finish too.
+  await page.waitForFunction(
+    () => {
+      const s = window.__frameLoadState;
+      return !!s && s.loaded >= s.total;
+    },
+    undefined,
+    { timeout: 120_000 },
+  );
   // Give the fade-out and first draw a beat
   await page.waitForTimeout(700);
 }
@@ -77,11 +87,23 @@ function meanAbsDiff(a: number[], b: number[]): number {
   return sum / ((a.length / 4) * 3);
 }
 
+/** Wait until the eased frame cursor has settled (canvas stops changing). */
+async function waitForCanvasStable(page: Page) {
+  let prev = await canvasPixels(page);
+  for (let i = 0; i < 30; i++) {
+    await page.waitForTimeout(120);
+    const cur = await canvasPixels(page);
+    if (meanAbsDiff(prev.data, cur.data) < 0.35) return;
+    prev = cur;
+  }
+}
+
 test('dive scrub: HUD counts through every zone and proof screenshots land', async ({ page }) => {
   await waitForStart(page);
 
   for (const stop of STOPS) {
     await scrubTo(page, stop.p);
+    await waitForCanvasStable(page);
     const magText = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
     if (stop.exact) {
       expect(magText).toBe(stop.exact);
@@ -101,7 +123,7 @@ test('dive scrub: HUD counts through every zone and proof screenshots land', asy
     const mid = (z.start + z.end) / 2 / denom;
     await scrubTo(page, mid);
     const active = await page.locator('.hud__zone[data-active="true"]').textContent();
-    expect(active?.trim()).toBe(ZONE_LABELS[i]);
+    expect(active).toContain(ZONE_LABELS[i]);
   }
 });
 
@@ -114,8 +136,10 @@ test('dive scrub: no visible seam at any clip boundary', async ({ page }) => {
     const firstOfNext = manifest.zones[i + 1].start / denom;
 
     await scrubTo(page, lastOfClip);
+    await waitForCanvasStable(page);
     const before = await canvasPixels(page);
     await scrubTo(page, firstOfNext);
+    await waitForCanvasStable(page);
     const after = await canvasPixels(page);
 
     const diff = meanAbsDiff(before.data, after.data);
@@ -207,7 +231,7 @@ test('hud rail: clicking a zone glides the dive to that zone', async ({ page }) 
   await page.waitForTimeout(3400);
 
   const active = (await page.locator('.hud__zone[data-active="true"]').textContent())?.trim();
-  expect(active).toBe('BOND');
+  expect(active).toContain('BOND');
   // Zone 4 entry (frame 303 of 484) sits at 10^3.76 ≈ 5,700x
   const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
   expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(4_000);

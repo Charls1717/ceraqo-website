@@ -1,27 +1,29 @@
 #!/usr/bin/env bash
 # Builds the scroll-scrub frame sequences from the five source clips.
 #
-#   bridge/out/clip1.mp4 .. clip5.mp4
-#     -> public/frames/desktop/fNNNN.webp  (every 2nd frame, 1600px wide)
-#     -> public/frames/mobile/fNNNN.webp   (same frames, 960px wide)
-#     -> public/frames/stills/zN.webp      (one curated still per zone)
+#   bridge/out/clip1.mp4 .. clip5.mp4  (1920x1080, 24fps, 8s each)
+#     -> public/frames/desktop/fNNNN.webp  (every 2nd frame, full 1920px, q90)
+#     -> public/frames/mobile/fNNNN.webp   (same frames, 1080px, q80)
+#     -> public/frames/stills/zN.webp      (one still per zone)
 #     -> public/poster.webp                (first frame)
 #     -> src/data/frame-manifest.json      (counts + zone ranges)
 #
 # Frame numbering is global and continuous across the five clips, in
-# dive order, so scrubbing the full sequence is one unbroken shot.
+# dive order, so scrubbing the full sequence is one unbroken shot. The
+# renderer cross-fades between adjacent frames, which is why every 2nd
+# source frame at maximum spatial quality beats every frame at a lower
+# one: sharpness is unrecoverable at draw time, temporal density is.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-STEP=2          # keep every 2nd frame
-DESKTOP_W=1600
-MOBILE_W=960
-DESKTOP_Q=80
-MOBILE_Q=72
+STEP=2
+DESKTOP_W=1920
+MOBILE_W=1080
+DESKTOP_Q=90
+MOBILE_Q=80
 
 CLIPS=(bridge/out/clip1.mp4 bridge/out/clip2.mp4 bridge/out/clip3.mp4 bridge/out/clip4.mp4 bridge/out/clip5.mp4)
-ZONE_IDS=(object drop spread bond lattice)
 
 for c in "${CLIPS[@]}"; do
   [[ -f $c ]] || { echo "missing $c" >&2; exit 1; }
@@ -40,10 +42,10 @@ for i in "${!CLIPS[@]}"; do
   echo "== $clip"
   mkdir -p "$TMP/d$i" "$TMP/m$i"
   ffmpeg -hide_banner -loglevel error -i "$clip" \
-    -vf "select='not(mod(n\,$STEP))',scale=$DESKTOP_W:-2" -vsync vfr \
+    -vf "select='not(mod(n\,$STEP))'" -vsync vfr \
     -c:v libwebp -quality $DESKTOP_Q "$TMP/d$i/%05d.webp"
   ffmpeg -hide_banner -loglevel error -i "$clip" \
-    -vf "select='not(mod(n\,$STEP))',scale=$MOBILE_W:-2" -vsync vfr \
+    -vf "select='not(mod(n\,$STEP))',scale=$MOBILE_W:-2:flags=lanczos" -vsync vfr \
     -c:v libwebp -quality $MOBILE_Q "$TMP/m$i/%05d.webp"
 
   n=$(ls "$TMP/d$i" | wc -l)
@@ -57,7 +59,7 @@ for i in "${!CLIPS[@]}"; do
   ZEND[$i]=$((global - 1))
   echo "   $n frames -> global ${ZSTART[$i]}..${ZEND[$i]}"
 
-  # Curated still: middle of the clip, a bit sharper than the scrub set
+  # Curated still: middle of the clip
   mid=$(( (ZSTART[$i] + ZEND[$i]) / 2 - ZSTART[$i] + 1 ))
   cp "public/frames/desktop/$(printf 'f%04d.webp' $((ZSTART[$i] + mid)))" \
      "public/frames/stills/z$((i + 1)).webp"
@@ -86,6 +88,12 @@ for i in 0 1 2 3; do
 done
 
 cp public/frames/desktop/f0001.webp public/poster.webp
+
+# Social card from the final hero frame
+ffmpeg -y -hide_banner -loglevel error \
+  -i "public/frames/desktop/$(printf 'f%04d.webp' "$global")" \
+  -vf "scale=1200:675:force_original_aspect_ratio=increase,crop=1200:630" \
+  -q:v 3 public/og.jpg
 
 # Probe output dimensions
 read DW DH < <(ffprobe -v error -select_streams v -show_entries stream=width,height -of csv=p=0 public/frames/desktop/f0001.webp | tr ',' ' ')

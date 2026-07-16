@@ -94,6 +94,7 @@ export default function PostDive() {
 
       {/* Launch banner */}
       <section className="launch section">
+        <div className="launch__over micro micro--cyan reveal">Launch window</div>
         <p className="launch__line reveal">
           One bottle. One car.
           <br />
@@ -137,9 +138,11 @@ export default function PostDive() {
       </section>
 
       <footer className="footer">
-        <div className="footer__mark wordmark">CERAQO</div>
+        <div className="footer__mark wordmark">
+          CERAQO <span>/</span> Q-ARMOR
+        </div>
         <div className="footer__meta">
-          <span className="micro">Q-ARMOR — silane-based quartz ceramic coating</span>
+          <span className="micro">Silane-based quartz ceramic coating</span>
           <span className="micro">© 2026 CERAQO</span>
         </div>
       </footer>

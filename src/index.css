@@ -28,6 +28,21 @@
   --font-sans: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Type scale — one system for the whole page */
+  --t-hero: clamp(2.4rem, 5vw, 4.4rem);
+  --t-fact: clamp(1.55rem, 2.9vw, 2.5rem);
+  --t-title: clamp(1.8rem, 3.4vw, 2.8rem);
+  --t-launch: clamp(2.1rem, 4.4vw, 3.8rem);
+  --t-mag: clamp(1.6rem, 3.2vw, 2.3rem);
+  --t-body: 0.9rem;
+  --t-kicker: 0.64rem;
+  --t-micro: 0.6rem;
+
+  /* Shared edge inset: HUD corners, finder frame and copy all hang on it */
+  --inset-x: clamp(1.4rem, 6vw, 5.5rem);
+  --inset-y: clamp(1.1rem, 3.2vh, 2.1rem);
+  --finder: 18px;
 }
 
 *,

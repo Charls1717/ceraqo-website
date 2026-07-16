@@ -7,7 +7,19 @@ import { FRAME_MANIFEST } from '../hooks/useFrameLoader';
 gsap.registerPlugin(ScrollTrigger);
 
 /** Scroll distance dedicated to each frame of the sequence. */
-const PX_PER_FRAME = 16;
+const PX_PER_FRAME = 22;
+
+/** Per-tick catch-up factor for the smoothed frame cursor. */
+const LERP = 0.24;
+
+/** Zone-local fade windows for the fact copy (fractions of the zone). */
+const FACT_WINDOWS = [
+  { in0: 0.3, in1: 0.42, out0: 0.78, out1: 0.92 }, // object — after the hero clears
+  { in0: 0.14, in1: 0.26, out0: 0.78, out1: 0.92 }, // drop
+  { in0: 0.14, in1: 0.26, out0: 0.78, out1: 0.92 }, // spread
+  { in0: 0.14, in1: 0.26, out0: 0.78, out1: 0.92 }, // bond
+  { in0: 0.08, in1: 0.18, out0: 0.46, out1: 0.6 }, // lattice — over the locked crystal
+];
 
 interface DiveProps {
   imagesRef: RefObject<(HTMLImageElement | undefined)[]>;
@@ -82,11 +94,18 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       needsDraw = true;
     };
 
+    // The scroll drives a fractional frame cursor; the canvas cross-fades
+    // between the two adjacent frames and eases toward the target, so
+    // motion stays continuous at any scroll speed instead of stepping
+    // from frame to frame.
+    let targetF = 0;
+    let displayF = 0;
     let targetIndex = 0;
-    let drawnIndex = -1;
     let needsDraw = true;
     let inView = true;
 
@@ -102,26 +121,58 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
       return undefined;
     };
 
-    const draw = () => {
-      const img = nearestLoaded(targetIndex);
-      if (!img || cssW === 0 || cssH === 0) return;
+    const coverDraw = (img: HTMLImageElement, alpha: number) => {
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
       if (!iw || !ih) return;
       const scale = Math.max(cssW / iw, cssH / ih);
       const dw = iw * scale;
       const dh = ih * scale;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, cssW, cssH);
+      ctx.globalAlpha = alpha;
       ctx.drawImage(img, (cssW - dw) / 2, (cssH - dh) / 2, dw, dh);
-      drawnIndex = targetIndex;
     };
 
-    const tick = () => {
+    const draw = (blend: boolean) => {
+      if (cssW === 0 || cssH === 0) return;
+      const images = imagesRef.current ?? [];
+      const i0 = blend ? Math.floor(displayF) : Math.round(displayF);
+      const i1 = Math.min(i0 + 1, count - 1);
+      const frac = displayF - i0;
+      const a = images[i0]?.complete ? images[i0] : nearestLoaded(i0);
+      if (!a) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, cssH);
+      coverDraw(a, 1);
+      if (blend && frac > 0.01 && i1 !== i0) {
+        const b = images[i1];
+        if (b?.complete) coverDraw(b, frac);
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    // Adaptive quality: the cross-fade costs a second full-frame blit,
+    // which weak GPUs / software rasterizers can't spare. Watch the real
+    // tick interval and fall back to single-frame drawing when the
+    // machine is struggling (with hysteresis so it doesn't flap).
+    let blendOn = true;
+    let emaInterval = 16.7;
+
+    const tick = (_t: number, deltaTime: number) => {
+      if (deltaTime > 0 && deltaTime < 120) {
+        emaInterval = emaInterval * 0.92 + deltaTime * 0.08;
+        if (blendOn && emaInterval > 26) blendOn = false;
+        else if (!blendOn && emaInterval < 17.5) blendOn = true;
+      }
       if (!inView) return;
-      if (needsDraw || drawnIndex !== targetIndex) {
+      const diff = targetF - displayF;
+      if (Math.abs(diff) > 0.0015) {
+        displayF += diff * LERP;
+        if (Math.abs(targetF - displayF) < 0.0015) displayF = targetF;
+        needsDraw = true;
+      }
+      if (needsDraw) {
         needsDraw = false;
-        draw();
+        draw(blendOn);
       }
     };
     gsap.ticker.add(tick);
@@ -173,7 +224,8 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
     };
 
     const update = (p: number) => {
-      targetIndex = Math.round(p * (count - 1));
+      targetF = p * (count - 1);
+      targetIndex = Math.round(targetF);
       if (targetIndex !== prevIndex) {
         decodeAhead(targetIndex, targetIndex > prevIndex ? 1 : -1);
         prevIndex = targetIndex;
@@ -206,24 +258,24 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
       setOverlay(heroRef.current, heroOpacity, -p * 300);
       setOverlay(hintRef.current, heroOpacity, 0);
 
-      // Zone facts: fade in after the zone starts, out before it ends
+      // Zone facts: fade in after the zone starts, out before it ends.
+      // Windows are tuned per zone so copy always sits over a settled,
+      // legible moment of the film: zone 1 yields to the hero headline,
+      // zone 5 speaks over the locked lattice and leaves before the
+      // fast pull-back out of the surface.
       overlayRefs.current.forEach((el, i) => {
         const w = zoneWindows[i];
         if (!el || !w) return;
         const span = Math.max(w.to - w.from, 0.0001);
         const t = (p - w.from) / span;
-        // First zone copy must not fight the hero headline
-        const inStart = i === 0 ? 0.3 : 0.14;
-        const inEnd = i === 0 ? 0.42 : 0.26;
-        const outStart = 0.78;
-        const outEnd = 0.92;
+        const win = FACT_WINDOWS[i] ?? FACT_WINDOWS[1];
         let o = 0;
-        if (t >= inStart && t <= outEnd) {
-          if (t < inEnd) o = (t - inStart) / (inEnd - inStart);
-          else if (t > outStart) o = 1 - (t - outStart) / (outEnd - outStart);
+        if (t >= win.in0 && t <= win.out1) {
+          if (t < win.in1) o = (t - win.in0) / (win.in1 - win.in0);
+          else if (t > win.out0) o = 1 - (t - win.out0) / (win.out1 - win.out0);
           else o = 1;
         }
-        const shift = (1 - Math.min(1, Math.max(0, (t - inStart) / (outEnd - inStart)))) * 26 - 8;
+        const shift = (1 - Math.min(1, Math.max(0, (t - win.in0) / (win.out1 - win.in0)))) * 26 - 8;
         setOverlay(el, o, shift);
       });
     };
@@ -253,6 +305,12 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
         <div className="dive-grade" />
         <div className="dive-vignette" />
         <div className="dive-grain" />
+        <div className="finder" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
 
         {/* Hero overlay */}
         <div ref={heroRef} className="overlay overlay--hero" style={{ opacity: 1 }}>
@@ -277,8 +335,11 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
               Zone 0{i + 1} — {zone.kicker}
             </div>
             <p className="overlay__fact">{zone.fact}</p>
-            <div className="overlay__index">
-              {String(i + 1).padStart(2, '0')} / {String(ZONES.length).padStart(2, '0')}
+            <div className="overlay__meta">
+              <span className="overlay__index">
+                {String(i + 1).padStart(2, '0')} / {String(ZONES.length).padStart(2, '0')}
+              </span>
+              <span className="overlay__meta-rule" />
             </div>
           </div>
         ))}
@@ -319,6 +380,7 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
                 aria-label={`Jump to zone ${i + 1} — ${zone.kicker}`}
                 onClick={() => jumpToZone(i)}
               >
+                <span className="hud__zone-num">0{i + 1}</span>
                 {zone.label}
               </button>
             ))}

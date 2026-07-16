@@ -7,6 +7,12 @@ export default function Preloader({ progress, done }: PreloaderProps) {
   const pct = Math.round(progress * 100);
   return (
     <div className="loader" data-done={done ? 'true' : 'false'} aria-hidden={done}>
+      <div className="finder" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
       <div className="loader__mark wordmark">
         CERAQO<span> / </span>Q-ARMOR
       </div>

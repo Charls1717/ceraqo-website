@@ -2,14 +2,14 @@
   "generated": true,
   "desktop": {
     "dir": "/frames/desktop",
-    "width": 1600,
-    "height": 900,
+    "width": 1920,
+    "height": 1080,
     "count": 485
   },
   "mobile": {
     "dir": "/frames/mobile",
-    "width": 960,
-    "height": 540,
+    "width": 1080,
+    "height": 608,
     "count": 485
   },
   "zones": [

@@ -146,6 +146,9 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
       const a = exact ?? store.nearest(i0);
       if (!a) return;
       drawnExact = !!exact;
+      const ds = (window.__diveStats ??= { draws: 0, fallbackDraws: 0 });
+      ds.draws++;
+      if (!exact) ds.fallbackDraws++;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cssW, cssH);
       coverDraw(a, 1);
@@ -182,11 +185,11 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
       if (!needsDraw && !drawnExact && storeRef.current?.get(Math.round(displayF))) {
         needsDraw = true;
       }
-      // On a machine that cannot present fast anyway, sub-frame repaints
-      // only queue more expensive canvas commits — require the cursor to
-      // have moved most of a frame before repainting.
-      if (needsDraw && emaInterval > 40 && drawnExact && Math.abs(displayF - lastDrawnF) < 0.75) {
-        return;
+      // Skip only true sub-pixel repaints of a frame we already show —
+      // never suppress catch-up (the old >40ms limiter did, and reads as
+      // a freeze-then-snap on screen).
+      if (needsDraw && drawnExact && Math.abs(displayF - lastDrawnF) < 0.02) {
+        needsDraw = false;
       }
       if (needsDraw) {
         needsDraw = false;

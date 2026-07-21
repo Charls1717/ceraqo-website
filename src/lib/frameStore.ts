@@ -10,9 +10,15 @@ import { frameUrl, type FrameSetInfo } from '../hooks/useFrameLoader';
  * the main thread and only a bounded window of bitmaps stays resident.
  */
 
-const AHEAD = 20;
-const BEHIND = 8;
-const EVICT_SLACK = 4;
+/**
+ * The window is SYMMETRIC around the cursor on purpose: Lenis produces
+ * tiny direction reversals at every gesture end, and a direction-biased
+ * window turned each of those into a mass evict + re-decode cycle. The
+ * screen-recording signature of that bug was the canvas re-drawing a
+ * stale neighbour every ~0.3s while the worker churned.
+ */
+const RADIUS = 14;
+const EVICT_SLACK = 6;
 
 export class FrameStore {
   readonly total: number;
@@ -25,7 +31,7 @@ export class FrameStore {
   private lastCenter = -1;
   private lastDir: 1 | -1 = 1;
 
-  constructor(info: FrameSetInfo) {
+  constructor(info: FrameSetInfo, resizeWidth?: number) {
     this.total = info.count;
     const urls = Array.from({ length: info.count }, (_, i) => frameUrl(info.dir, i));
     this.worker = new Worker(new URL('./frameWorker.ts', import.meta.url), {
@@ -54,18 +60,20 @@ export class FrameStore {
         this.pending.delete(m.index);
       }
     };
-    this.worker.postMessage({ type: 'init', urls });
+    this.worker.postMessage({
+      type: 'init',
+      urls,
+      resizeWidth: resizeWidth && resizeWidth < info.width ? resizeWidth : undefined,
+    });
   }
 
-  private windowBounds(center: number, dir: 1 | -1): [number, number] {
-    const ahead = dir === 1 ? AHEAD : BEHIND;
-    const behind = dir === 1 ? BEHIND : AHEAD;
-    return [Math.max(0, center - behind), Math.min(this.total - 1, center + ahead)];
+  private windowBounds(center: number): [number, number] {
+    return [Math.max(0, center - RADIUS), Math.min(this.total - 1, center + RADIUS)];
   }
 
   private inWindow(i: number): boolean {
     if (this.lastCenter < 0) return true;
-    const [lo, hi] = this.windowBounds(this.lastCenter, this.lastDir);
+    const [lo, hi] = this.windowBounds(this.lastCenter);
     return i >= lo - EVICT_SLACK && i <= hi + EVICT_SLACK;
   }
 
@@ -73,7 +81,7 @@ export class FrameStore {
   request(center: number, dir: 1 | -1, gentle = false) {
     this.lastCenter = center;
     this.lastDir = dir;
-    const [lo, hi] = this.windowBounds(center, dir);
+    const [lo, hi] = this.windowBounds(center);
 
     if (!gentle) {
       for (const [k, bmp] of this.bitmaps) {
@@ -85,15 +93,15 @@ export class FrameStore {
       }
     }
 
-    // Priority: the target itself, then ahead in scroll direction, then behind
+    // Priority: the target first, then outward — leaning one step extra
+    // in the travel direction per ring so catch-up favours where the
+    // cursor is heading without ever churning on a direction flip.
     const want: number[] = [];
-    for (let d = 0; d <= AHEAD; d++) {
-      const i = center + d * dir;
-      if (i >= lo && i <= hi) want.push(i);
-    }
-    for (let d = 1; d <= BEHIND; d++) {
-      const i = center - d * dir;
-      if (i >= lo && i <= hi) want.push(i);
+    for (let d = 0; d <= RADIUS; d++) {
+      const a = center + d * dir;
+      const b = center - d * dir;
+      if (a >= lo && a <= hi) want.push(a);
+      if (d > 0 && b >= lo && b <= hi) want.push(b);
     }
     const need = want.filter(
       (i) => i >= 0 && i < this.total && !this.bitmaps.has(i) && !this.pending.has(i),

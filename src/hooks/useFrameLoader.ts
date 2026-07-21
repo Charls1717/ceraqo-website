@@ -37,6 +37,8 @@ declare global {
   interface Window {
     /** loading telemetry, also used by the QA suite */
     __frameLoadState?: { loaded: number; total: number };
+    /** draw/starvation telemetry: fallbackDraws are stale-frame paints */
+    __diveStats?: { draws: number; fallbackDraws: number };
   }
 }
 
@@ -55,7 +57,13 @@ export function useFrameStore(profile: FrameProfile, enabled: boolean) {
     if (!enabled) return;
 
     const info = FRAME_MANIFEST[profile];
-    const store = new FrameStore(info);
+    // Decode straight to the size the canvas will blit (cover-fit at the
+    // capped DPR) so resident bitmaps stay small and blits are ~1:1.
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const coverWidth = Math.ceil(
+      Math.max(window.innerWidth, window.innerHeight * (info.width / info.height)) * dpr,
+    );
+    const store = new FrameStore(info, coverWidth);
     storeRef.current = store;
     window.__frameLoadState = { loaded: 0, total: info.count };
 

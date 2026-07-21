@@ -8,6 +8,8 @@
 interface InitMsg {
   type: 'init';
   urls: string[];
+  /** decode straight to display size: smaller residents, 1:1 blits */
+  resizeWidth?: number;
 }
 interface NeedMsg {
   type: 'need';
@@ -18,7 +20,7 @@ type InMsg = InitMsg | NeedMsg;
 
 const blobs: (Blob | undefined)[] = [];
 let queue: number[] = [];
-let decoding = false;
+let resizeWidth: number | undefined;
 
 const post = (msg: unknown, transfer?: Transferable[]) =>
   (self as unknown as Worker).postMessage(msg, transfer ?? []);
@@ -46,27 +48,44 @@ async function fetchAll(urls: string[]) {
   );
 }
 
-/** Decode one queued frame at a time so 'need' reprioritisation wins. */
-async function pump() {
-  if (decoding) return;
-  decoding = true;
-  while (queue.length) {
+/**
+ * Decode with a few parallel lanes — createImageBitmap runs on the
+ * browser's thread pool, so concurrent decodes use multiple cores and
+ * catch-up throughput beats any realistic scrub speed. The queue is
+ * still replaced wholesale by each 'need', so priority stays fresh.
+ */
+const LANES = 3;
+let active = 0;
+
+function pump() {
+  while (active < LANES && queue.length) {
     const i = queue.shift()!;
     const blob = blobs[i];
     if (!blob) continue; // not fetched yet; main will re-request
-    try {
-      const bitmap = await createImageBitmap(blob);
-      post({ type: 'bitmap', index: i, bitmap }, [bitmap]);
-    } catch {
-      post({ type: 'bitmapfail', index: i });
-    }
+    active++;
+    const done = () => {
+      active--;
+      pump();
+    };
+    const opts = resizeWidth
+      ? { resizeWidth, resizeQuality: 'high' as const }
+      : undefined;
+    createImageBitmap(blob, opts as ImageBitmapOptions)
+      .then((bitmap) => {
+        post({ type: 'bitmap', index: i, bitmap }, [bitmap]);
+        done();
+      })
+      .catch(() => {
+        post({ type: 'bitmapfail', index: i });
+        done();
+      });
   }
-  decoding = false;
 }
 
 self.onmessage = (e: MessageEvent<InMsg>) => {
   const m = e.data;
   if (m.type === 'init') {
+    resizeWidth = m.resizeWidth;
     void fetchAll(m.urls);
   } else if (m.type === 'need') {
     // Newest request defines priority: replace, don't append.

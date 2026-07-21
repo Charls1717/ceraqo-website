@@ -5,17 +5,20 @@ import Lenis from 'lenis';
 import Dive from './components/Dive';
 import Preloader from './components/Preloader';
 import PostDive from './components/PostDive';
-import { useFrameLoader } from './hooks/useFrameLoader';
+import { useFrameLoader, type FrameProfile } from './hooks/useFrameLoader';
 import './styles/site.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
-  // Pick the frame set once per load: phones get the lighter set.
-  const profile = useMemo<'desktop' | 'mobile'>(
-    () => (window.matchMedia('(max-width: 820px)').matches ? 'mobile' : 'desktop'),
-    [],
-  );
+  // Pick the frame set once per load: phones get the lighter set, and
+  // displays that would show more than ~1920 physical pixels of frame
+  // (retina laptops, 4K monitors) get the high-DPI tier.
+  const profile = useMemo<FrameProfile>(() => {
+    if (window.matchMedia('(max-width: 820px)').matches) return 'mobile';
+    const physical = (window.devicePixelRatio || 1) * window.innerWidth;
+    return physical > 1920 ? 'hidpi' : 'desktop';
+  }, []);
 
   const { imagesRef, progress, ready } = useFrameLoader(profile, true);
   const [started, setStarted] = useState(false);

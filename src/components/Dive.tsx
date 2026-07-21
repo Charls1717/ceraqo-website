@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ZONES, magnificationAt, formatMagnification } from '../data/zones';
-import { FRAME_MANIFEST } from '../hooks/useFrameLoader';
+import { FRAME_MANIFEST, type FrameProfile } from '../hooks/useFrameLoader';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,7 +23,7 @@ const FACT_WINDOWS = [
 
 interface DiveProps {
   imagesRef: RefObject<(HTMLImageElement | undefined)[]>;
-  profile: 'desktop' | 'mobile';
+  profile: FrameProfile;
   /** true once the preloader has finished — switches the HUD on */
   active: boolean;
 }

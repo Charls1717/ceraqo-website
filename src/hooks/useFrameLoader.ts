@@ -19,9 +19,12 @@ export interface ZoneRange {
 
 export interface FrameManifest {
   desktop: FrameSetInfo;
+  hidpi: FrameSetInfo;
   mobile: FrameSetInfo;
   zones: ZoneRange[];
 }
+
+export type FrameProfile = 'desktop' | 'hidpi' | 'mobile';
 
 export const FRAME_MANIFEST = manifest as unknown as FrameManifest;
 
@@ -45,7 +48,7 @@ declare global {
  * Images land in a stable ref array so consumers can draw without
  * re-rendering.
  */
-export function useFrameLoader(profile: 'desktop' | 'mobile', enabled: boolean) {
+export function useFrameLoader(profile: FrameProfile, enabled: boolean) {
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
   const imagesRef = useRef<(HTMLImageElement | undefined)[]>([]);

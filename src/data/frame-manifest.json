@@ -6,6 +6,12 @@
     "height": 1080,
     "count": 485
   },
+  "hidpi": {
+    "dir": "/frames/hidpi",
+    "width": 2560,
+    "height": 1440,
+    "count": 485
+  },
   "mobile": {
     "dir": "/frames/mobile",
     "width": 1080,

@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 interface Manifest {
-  desktop: { count: number };
-  mobile: { count: number };
+  desktop: { count: number; width: number };
+  hidpi: { count: number; width: number };
+  mobile: { count: number; width: number };
   zones: { id: string; start: number; end: number }[];
 }
 
@@ -235,6 +236,29 @@ test('hud rail: clicking a zone glides the dive to that zone', async ({ page }) 
   // Zone 4 entry (frame 303 of 484) sits at 10^3.76 ≈ 5,700x
   const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
   expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(4_000);
+});
+
+test.describe('high-DPI', () => {
+  test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+
+  test('retina displays load the 2560px tier and scrub correctly', async ({ page }) => {
+    const frameRequests: string[] = [];
+    page.on('request', (req) => {
+      const url = req.url();
+      if (url.includes('/frames/')) frameRequests.push(url);
+    });
+
+    await waitForStart(page);
+
+    const hidpiHits = frameRequests.filter((u) => u.includes('/frames/hidpi/')).length;
+    const desktopHits = frameRequests.filter((u) => u.includes('/frames/desktop/')).length;
+    expect(hidpiHits).toBe(manifest.hidpi.count);
+    expect(desktopHits).toBe(0);
+
+    await scrubTo(page, 0.25);
+    const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
+    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(20);
+  });
 });
 
 test.describe('reduced motion', () => {

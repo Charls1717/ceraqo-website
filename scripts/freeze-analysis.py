@@ -5,13 +5,22 @@ absolute difference; a freeze is diff below threshold sustained for
 3+ consecutive captured frames.
 
   python3 scripts/freeze-analysis.py <video> [threshold]
+  python3 scripts/freeze-analysis.py --windows <video> [threshold]
+
+Default mode analyses the span between the first and last white-corner
+marker burst as one window (the scrub-era behaviour). --windows scores
+every inter-burst window separately and aggregates — built for the
+snap dive, where rest dwells are static by design and only the marked
+playback windows are meaningful.
 """
 import json
 import subprocess
 import sys
 
-video = sys.argv[1]
-threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
+args = [a for a in sys.argv[1:] if a != "--windows"]
+windows_mode = "--windows" in sys.argv[1:]
+video = args[0]
+threshold = float(args[1]) if len(args) > 1 else 0.5
 
 W, H = 320, 180
 probe = subprocess.run(
@@ -48,8 +57,42 @@ while True:
     fidx += 1
 proc.wait()
 
-# Analyse only between the end of the first marker burst and the start
-# of the last one — the active-scrub window.
+def find_episodes(seg):
+    frozen = [d < threshold for d in seg]
+    episodes = []
+    i = 0
+    while i < len(frozen):
+        if frozen[i]:
+            j = i
+            while j < len(frozen) and frozen[j]:
+                j += 1
+            if j - i >= 3:
+                episodes.append((i, j - i))
+            i = j
+        else:
+            i += 1
+    return episodes
+
+
+def stats(seg):
+    episodes = find_episodes(seg)
+    frozen_frames = sum(length for _, length in episodes)
+    out = {
+        "framesAnalyzed": len(seg),
+        "durationS": round(len(seg) / fps, 1),
+        "freezeEpisodes": len(episodes),
+        "pctTimeFrozen": round(100 * frozen_frames / max(len(seg), 1), 1),
+        "longestFreezeS": round(max((length for _, length in episodes), default=0) / fps, 2),
+        "medianGapS": None,
+    }
+    if len(episodes) >= 2:
+        starts = [s for s, _ in episodes]
+        gaps = sorted(b - a for a, b in zip(starts, starts[1:]))
+        out["medianGapS"] = round(gaps[len(gaps) // 2] / fps, 2)
+    return out
+
+
+bursts = []
 if markers:
     bursts = [[markers[0]]]
     for m in markers[1:]:
@@ -57,37 +100,25 @@ if markers:
             bursts[-1].append(m)
         else:
             bursts.append([m])
+
+if windows_mode and len(bursts) >= 2:
+    segments = []
+    for a, b in zip(bursts, bursts[1:]):
+        s = a[-1] + 2
+        e = b[0] - 2
+        if e - s >= 5:
+            segments.append(diffs[s:e])
+    result = {
+        "fps": round(fps, 2),
+        "windows": [dict(window=i + 1, **stats(seg)) for i, seg in enumerate(segments)],
+        "aggregate": stats([d for seg in segments for d in seg]),
+    }
+    print("FREEZE_ANALYSIS " + json.dumps(result))
+else:
+    # Analyse between the end of the first burst and the start of the
+    # last one — the active window (scrub-era behaviour).
+    seg = diffs
     if len(bursts) >= 2:
-        start = bursts[0][-1] + 2
-        end = bursts[-1][0] - 2
-        diffs = diffs[start:end]
-
-frozen = [d < threshold for d in diffs]
-episodes = []
-i = 0
-while i < len(frozen):
-    if frozen[i]:
-        j = i
-        while j < len(frozen) and frozen[j]:
-            j += 1
-        if j - i >= 3:
-            episodes.append((i, j - i))
-        i = j
-    else:
-        i += 1
-
-frozen_frames = sum(length for _, length in episodes)
-result = {
-    "fps": round(fps, 2),
-    "framesAnalyzed": len(diffs),
-    "durationS": round(len(diffs) / fps, 1),
-    "freezeEpisodes": len(episodes),
-    "pctTimeFrozen": round(100 * frozen_frames / max(len(diffs), 1), 1),
-    "longestFreezeS": round(max((length for _, length in episodes), default=0) / fps, 2),
-    "medianGapS": None,
-}
-if len(episodes) >= 2:
-    starts = [s for s, _ in episodes]
-    gaps = sorted(b - a for a, b in zip(starts, starts[1:]))
-    result["medianGapS"] = round(gaps[len(gaps) // 2] / fps, 2)
-print("FREEZE_ANALYSIS " + json.dumps(result))
+        seg = diffs[bursts[0][-1] + 2 : bursts[-1][0] - 2]
+    result = dict(fps=round(fps, 2), **stats(seg))
+    print("FREEZE_ANALYSIS " + json.dumps(result))

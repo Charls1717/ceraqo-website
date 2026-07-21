@@ -2,25 +2,31 @@ import { useEffect, useMemo, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
+import Hero from './components/Hero';
+import Intro from './components/Intro';
 import Dive from './components/Dive';
 import Preloader from './components/Preloader';
 import PostDive from './components/PostDive';
-import { useFrameStore, type FrameProfile } from './hooks/useFrameLoader';
+import { useDivePreload, type DiveTier } from './hooks/useDivePreload';
 import './styles/site.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
-  // Pick the frame set once per load: phones get the lighter set, and
-  // displays that would show more than ~1920 physical pixels of frame
-  // (retina laptops, 4K monitors) get the high-DPI tier.
-  const profile = useMemo<FrameProfile>(() => {
-    if (window.matchMedia('(max-width: 820px)').matches) return 'mobile';
-    const physical = (window.devicePixelRatio || 1) * window.innerWidth;
-    return physical > 1920 ? 'hidpi' : 'desktop';
+  // Pick the asset tier once per load: phones get the lighter videos;
+  // displays that would show more than ~1920 physical pixels get the
+  // 2560-wide rest stills (the videos stay 1080p — they only run in
+  // motion, where upscaled video reads clean).
+  const tier = useMemo<DiveTier>(
+    () => (window.matchMedia('(max-width: 820px)').matches ? 'mobile' : 'desktop'),
+    [],
+  );
+  const hidpiRests = useMemo(() => {
+    if (window.matchMedia('(max-width: 820px)').matches) return false;
+    return (window.devicePixelRatio || 1) * window.innerWidth > 1920;
   }, []);
 
-  const { storeRef, progress, ready } = useFrameStore(profile, true);
+  const { assets, progress, ready } = useDivePreload(tier, hidpiRests);
   const [started, setStarted] = useState(false);
   const diag = useMemo(() => new URLSearchParams(window.location.search).has('diag'), []);
 
@@ -40,20 +46,19 @@ export default function App() {
     };
   }, []);
 
-  // Release the scroll once frames are decoded
+  // The loader's percentage is bound to exactly the bytes that gate
+  // this flip, so the moment it reads 100% the page starts — the only
+  // thing between the two is the loader's own fade-out.
   useEffect(() => {
     if (!ready || started) return;
-    const t = window.setTimeout(() => {
-      setStarted(true);
-      const lenis = (window as unknown as { __lenis?: Lenis }).__lenis;
-      lenis?.start();
-      ScrollTrigger.refresh();
-    }, 450);
-    return () => window.clearTimeout(t);
+    setStarted(true);
+    const lenis = (window as unknown as { __lenis?: Lenis }).__lenis;
+    lenis?.start();
+    ScrollTrigger.refresh();
   }, [ready, started]);
 
-  // Failsafe: the page must never stay scroll-locked, even if the frame
-  // preload wedges on a flaky connection.
+  // Failsafe: never leave the page scroll-locked on a wedged fetch —
+  // every consumer falls back to streaming network URLs.
   useEffect(() => {
     if (started) return;
     const t = window.setTimeout(() => {
@@ -61,31 +66,36 @@ export default function App() {
       const lenis = (window as unknown as { __lenis?: Lenis }).__lenis;
       lenis?.start();
       ScrollTrigger.refresh();
-    }, 25000);
+    }, 12000);
     return () => window.clearTimeout(t);
   }, [started]);
 
   return (
     <>
       <Preloader progress={progress} done={started} />
-      <Dive storeRef={storeRef} profile={profile} active={started} />
+      <Hero assets={assets} on={started} />
+      <Intro />
+      <Dive assets={assets} active={started} />
       <PostDive />
-      {diag && <Diag profile={profile} progress={progress} ready={ready} started={started} />}
+      {diag && <Diag tier={tier} progress={progress} ready={ready} started={started} />}
     </>
   );
 }
 
 /** Tiny on-page readout for remote debugging: append ?diag to the URL. */
-function Diag(props: { profile: string; progress: number; ready: boolean; started: boolean }) {
-  const [scroll, setScroll] = useState(0);
+function Diag(props: { tier: string; progress: number; ready: boolean; started: boolean }) {
+  const [line, setLine] = useState('');
   useEffect(() => {
-    const read = () => setScroll(Math.round(window.scrollY));
-    const i = window.setInterval(read, 400);
-    window.addEventListener('scroll', read, { passive: true });
-    return () => {
-      window.clearInterval(i);
-      window.removeEventListener('scroll', read);
+    const read = () => {
+      const d = window.__diveState;
+      setLine(
+        `scrollY ${Math.round(window.scrollY)} · state ${d?.state ?? '-'} ${d?.mode ?? ''}${
+          d?.captured ? ' · captured' : ''
+        }`,
+      );
     };
+    const i = window.setInterval(read, 300);
+    return () => window.clearInterval(i);
   }, []);
   return (
     <div
@@ -102,13 +112,10 @@ function Diag(props: { profile: string; progress: number; ready: boolean; starte
         maxWidth: '90vw',
       }}
     >
-      ua: {navigator.userAgent.slice(0, 72)}
+      tier {props.tier} · load {Math.round(props.progress * 100)}% · ready {String(props.ready)} ·
+      started {String(props.started)}
       <br />
-      profile {props.profile} · frames {Math.round(props.progress * 100)}% · ready{' '}
-      {String(props.ready)} · started {String(props.started)}
-      <br />
-      scrollY {scroll} · sticky {CSS.supports('position', 'sticky') ? 'ok' : 'UNSUPPORTED'} · svh{' '}
-      {CSS.supports('height', '100svh') ? 'ok' : 'no'}
+      {line}
     </div>
   );
 }

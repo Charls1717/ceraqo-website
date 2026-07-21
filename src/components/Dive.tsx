@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ZONES, magnificationAt, formatMagnification } from '../data/zones';
 import { FRAME_MANIFEST, type FrameProfile } from '../hooks/useFrameLoader';
+import type { FrameStore } from '../lib/frameStore';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,6 +12,15 @@ const PX_PER_FRAME = 22;
 
 /** Per-tick catch-up factor for the smoothed frame cursor. */
 const LERP = 0.24;
+
+/**
+ * Canvas backing-store DPR cap, independent of the fetched image tier.
+ * Committing the canvas to the compositor costs main-thread time in
+ * proportion to backing pixels (profiled: ~300ms/commit at dpr2 under
+ * 4x throttle without GPU); 1.5 keeps retina crispness at ~half the
+ * commit cost of dpr2 and ~a quarter of dpr3 phones.
+ */
+const DPR_CAP = 1.5;
 
 /** Zone-local fade windows for the fact copy (fractions of the zone). */
 const FACT_WINDOWS = [
@@ -22,13 +32,13 @@ const FACT_WINDOWS = [
 ];
 
 interface DiveProps {
-  imagesRef: RefObject<(HTMLImageElement | undefined)[]>;
+  storeRef: RefObject<FrameStore | null>;
   profile: FrameProfile;
   /** true once the preloader has finished — switches the HUD on */
   active: boolean;
 }
 
-export default function Dive({ imagesRef, profile, active }: DiveProps) {
+export default function Dive({ storeRef, profile, active }: DiveProps) {
   const info = FRAME_MANIFEST[profile];
   const zones = FRAME_MANIFEST.zones;
   const count = info.count;
@@ -80,7 +90,9 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
     const canvas = canvasRef.current;
     if (!track || !canvas || count === 0) return;
 
-    const ctx = canvas.getContext('2d');
+    // alpha:false — the stage is opaque, and an opaque canvas composites
+    // without a blend pass.
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
     let cssW = 0;
@@ -91,7 +103,7 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
       const stage = canvas.parentElement!;
       cssW = stage.clientWidth;
       cssH = stage.clientHeight;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
       ctx.imageSmoothingEnabled = true;
@@ -108,44 +120,38 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
     let targetIndex = 0;
     let needsDraw = true;
     let inView = true;
+    let drawnExact = false;
 
-    const nearestLoaded = (index: number): HTMLImageElement | undefined => {
-      const images = imagesRef.current ?? [];
-      if (images[index]?.complete) return images[index];
-      for (let d = 1; d < count; d++) {
-        const lo = images[index - d];
-        if (lo?.complete) return lo;
-        const hi = images[index + d];
-        if (hi?.complete) return hi;
-      }
-      return undefined;
-    };
-
-    const coverDraw = (img: HTMLImageElement, alpha: number) => {
-      const iw = img.naturalWidth;
-      const ih = img.naturalHeight;
+    const coverDraw = (bmp: ImageBitmap, alpha: number) => {
+      const iw = bmp.width;
+      const ih = bmp.height;
       if (!iw || !ih) return;
       const scale = Math.max(cssW / iw, cssH / ih);
       const dw = iw * scale;
       const dh = ih * scale;
       ctx.globalAlpha = alpha;
-      ctx.drawImage(img, (cssW - dw) / 2, (cssH - dh) / 2, dw, dh);
+      ctx.drawImage(bmp, (cssW - dw) / 2, (cssH - dh) / 2, dw, dh);
     };
 
+    // Draws only worker-decoded ImageBitmaps from the sliding window —
+    // never anything that would trigger a synchronous decode.
     const draw = (blend: boolean) => {
       if (cssW === 0 || cssH === 0) return;
-      const images = imagesRef.current ?? [];
+      const store = storeRef.current;
+      if (!store) return;
       const i0 = blend ? Math.floor(displayF) : Math.round(displayF);
       const i1 = Math.min(i0 + 1, count - 1);
       const frac = displayF - i0;
-      const a = images[i0]?.complete ? images[i0] : nearestLoaded(i0);
+      const exact = store.get(i0);
+      const a = exact ?? store.nearest(i0);
       if (!a) return;
+      drawnExact = !!exact;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cssW, cssH);
       coverDraw(a, 1);
       if (blend && frac > 0.01 && i1 !== i0) {
-        const b = images[i1];
-        if (b?.complete) coverDraw(b, frac);
+        const b = store.get(i1);
+        if (b) coverDraw(b, frac);
       }
       ctx.globalAlpha = 1;
     };
@@ -156,6 +162,7 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
     // machine is struggling (with hysteresis so it doesn't flap).
     let blendOn = true;
     let emaInterval = 16.7;
+    let lastDrawnF = -1;
 
     const tick = (_t: number, deltaTime: number) => {
       if (deltaTime > 0 && deltaTime < 120) {
@@ -170,8 +177,20 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
         if (Math.abs(targetF - displayF) < 0.0015) displayF = targetF;
         needsDraw = true;
       }
+      // A fallback neighbour was shown and the real bitmap has since
+      // arrived from the worker — repaint with the exact frame.
+      if (!needsDraw && !drawnExact && storeRef.current?.get(Math.round(displayF))) {
+        needsDraw = true;
+      }
+      // On a machine that cannot present fast anyway, sub-frame repaints
+      // only queue more expensive canvas commits — require the cursor to
+      // have moved most of a frame before repainting.
+      if (needsDraw && emaInterval > 40 && drawnExact && Math.abs(displayF - lastDrawnF) < 0.75) {
+        return;
+      }
       if (needsDraw) {
         needsDraw = false;
+        lastDrawnF = displayF;
         draw(blendOn);
       }
     };
@@ -204,30 +223,14 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
 
     let lastZone = -1;
     let lastMagText = '';
-
-    // Pre-decode frames just ahead of the scrub so drawImage never has to
-    // block on a cold WebP decode mid-scroll.
-    const decodeRequested = new Set<number>();
     let prevIndex = 0;
-    const LOOKAHEAD = 14;
-    const decodeAhead = (from: number, direction: 1 | -1) => {
-      const images = imagesRef.current ?? [];
-      for (let d = 1; d <= LOOKAHEAD; d++) {
-        const i = from + d * direction;
-        if (i < 0 || i >= count || decodeRequested.has(i)) continue;
-        decodeRequested.add(i);
-        images[i]?.decode().catch(() => {
-          // Re-request later if the decoded data was evicted
-          decodeRequested.delete(i);
-        });
-      }
-    };
 
     const update = (p: number) => {
       targetF = p * (count - 1);
       targetIndex = Math.round(targetF);
       if (targetIndex !== prevIndex) {
-        decodeAhead(targetIndex, targetIndex > prevIndex ? 1 : -1);
+        // Aim the worker's decode window at the new position
+        storeRef.current?.request(targetIndex, targetIndex > prevIndex ? 1 : -1);
         prevIndex = targetIndex;
       }
 
@@ -296,7 +299,7 @@ export default function Dive({ imagesRef, profile, active }: DiveProps) {
       ro.disconnect();
       gsap.ticker.remove(tick);
     };
-  }, [imagesRef, count, zoneWindows]);
+  }, [storeRef, count, zoneWindows]);
 
   return (
     <section ref={trackRef} className="dive-track" style={{ height: trackHeight }} aria-label="The Q-ARMOR dive">

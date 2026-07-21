@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import manifest from '../data/frame-manifest.json';
 import { assetUrl } from '../lib/assetUrl';
+import { FrameStore } from '../lib/frameStore';
 
 export interface FrameSetInfo {
   dir: string;
@@ -32,8 +33,6 @@ export function frameUrl(dir: string, index: number): string {
   return assetUrl(`${dir}/f${String(index + 1).padStart(4, '0')}.webp`);
 }
 
-const CONCURRENCY = 10;
-
 declare global {
   interface Window {
     /** loading telemetry, also used by the QA suite */
@@ -42,92 +41,46 @@ declare global {
 }
 
 /**
- * Preloads the frame sequence for the given profile in two phases:
- * the loader blocks only until the first zone (plus a spill margin) is
- * decoded, then the page opens while the rest streams in scroll order.
- * Images land in a stable ref array so consumers can draw without
- * re-rendering.
+ * Streams the frame sequence for the given profile through the decode
+ * worker (see lib/frameStore). The loader blocks only until the OBJECT
+ * zone is fetched and the opening bitmaps are decoded; everything else
+ * streams in scroll order while the visitor is still at the top.
  */
-export function useFrameLoader(profile: FrameProfile, enabled: boolean) {
+export function useFrameStore(profile: FrameProfile, enabled: boolean) {
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
-  const imagesRef = useRef<(HTMLImageElement | undefined)[]>([]);
+  const storeRef = useRef<FrameStore | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
 
-    let cancelled = false;
     const info = FRAME_MANIFEST[profile];
-    const count = info.count;
-    const images: (HTMLImageElement | undefined)[] = new Array(count);
-    imagesRef.current = images;
-    window.__frameLoadState = { loaded: 0, total: count };
+    const store = new FrameStore(info);
+    storeRef.current = store;
+    window.__frameLoadState = { loaded: 0, total: info.count };
 
-    if (count === 0) {
-      setProgress(1);
-      setReady(true);
-      return;
-    }
-
-    // Block the loader on the OBJECT zone plus a spill into DROP; the
-    // rest streams in while the visitor is still at the top.
-    const firstZoneEnd = FRAME_MANIFEST.zones[0]?.end ?? count - 1;
-    const blockUntil = Math.min(count, firstZoneEnd + 33);
-
-    let loaded = 0;
-    let cursor = 0;
+    const firstZoneEnd = FRAME_MANIFEST.zones[0]?.end ?? info.count - 1;
+    const blockUntil = Math.min(info.count, firstZoneEnd + 33);
     let readyFired = false;
 
-    const loadOne = (index: number) =>
-      new Promise<void>((resolve) => {
-        const img = new Image();
-        img.decoding = 'async';
-        const done = () => {
-          images[index] = img;
-          resolve();
-        };
-        img.onload = done;
-        // A dropped frame should never wedge the loader; the canvas
-        // falls back to the nearest loaded neighbour.
-        img.onerror = () => resolve();
-        img.src = frameUrl(info.dir, index);
-      });
-
-    const bump = () => {
-      loaded++;
-      if (window.__frameLoadState) window.__frameLoadState.loaded = loaded;
-      if (!readyFired) {
-        if (loaded === blockUntil || loaded % 4 === 0) {
-          setProgress(Math.min(1, loaded / blockUntil));
-        }
-        if (loaded >= blockUntil) {
-          readyFired = true;
-          setProgress(1);
-          setReady(true);
-        }
-      }
-    };
-
-    const worker = async () => {
-      while (!cancelled) {
-        const index = cursor++;
-        if (index >= count) return;
-        await loadOne(index);
-        bump();
-      }
-    };
-
-    Promise.all(Array.from({ length: CONCURRENCY }, worker)).then(() => {
-      if (!cancelled && !readyFired) {
+    store.onProgress = (loaded, total) => {
+      window.__frameLoadState = { loaded, total };
+      if (readyFired) return;
+      setProgress(Math.min(1, loaded / blockUntil));
+      if (loaded >= blockUntil && store.get(0)) {
+        readyFired = true;
         setProgress(1);
         setReady(true);
       }
-    });
+    };
+    // Aim the decode window at the top of the dive immediately
+    store.request(0, 1);
 
     return () => {
-      cancelled = true;
+      store.destroy();
+      storeRef.current = null;
     };
   }, [profile, enabled]);
 
-  return { imagesRef, progress, ready };
+  return { storeRef, progress, ready };
 }

@@ -5,7 +5,7 @@ import Lenis from 'lenis';
 import Dive from './components/Dive';
 import Preloader from './components/Preloader';
 import PostDive from './components/PostDive';
-import { useFrameLoader, type FrameProfile } from './hooks/useFrameLoader';
+import { useFrameStore, type FrameProfile } from './hooks/useFrameLoader';
 import './styles/site.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -20,7 +20,7 @@ export default function App() {
     return physical > 1920 ? 'hidpi' : 'desktop';
   }, []);
 
-  const { imagesRef, progress, ready } = useFrameLoader(profile, true);
+  const { storeRef, progress, ready } = useFrameStore(profile, true);
   const [started, setStarted] = useState(false);
   const diag = useMemo(() => new URLSearchParams(window.location.search).has('diag'), []);
 
@@ -68,7 +68,7 @@ export default function App() {
   return (
     <>
       <Preloader progress={progress} done={started} />
-      <Dive imagesRef={imagesRef} profile={profile} active={started} />
+      <Dive storeRef={storeRef} profile={profile} active={started} />
       <PostDive />
       {diag && <Diag profile={profile} progress={progress} ready={ready} started={started} />}
     </>

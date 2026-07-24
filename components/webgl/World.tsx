@@ -1,9 +1,10 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
+import { Environment, Lightformer } from "@react-three/drei";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import Bottle from "@/components/webgl/Bottle";
+import HeroBottle from "@/components/webgl/HeroBottle";
 import StationText from "@/components/webgl/StationText";
 import { stationFocus, scrollProgress } from "@/lib/journey";
 import { HERO, SCIENCE, APPLICATION, RESULT } from "@/lib/copy";
@@ -35,10 +36,30 @@ export default function World({ tier }: { tier: Tier }) {
       <Floor tier={tier} />
       <Dust tier={tier} />
 
-      {/* CH0 — hero bottle */}
+      {/* Studio reflections (Part A): procedural light-strip environment
+          — champagne key strip, neutral fill, dim green-grey dome — so
+          the brushed cap and collar carry real speculars. Skipped at
+          the software floor tier. */}
+      {tier > 1 && (
+        <Environment resolution={128} frames={1}>
+          <Lightformer form="rect" intensity={2.2} color="#E6C99C" position={[5, 5, 2]} rotation={[0, -Math.PI / 4, 0]} scale={[6, 1.4, 1]} />
+          <Lightformer form="rect" intensity={0.9} color="#BCC1BB" position={[-6, 3, 1]} rotation={[0, Math.PI / 4, 0]} scale={[4, 2, 1]} />
+          <Lightformer form="circle" intensity={0.5} color="#2E332F" position={[0, 8, -6]} scale={[18, 18, 1]} />
+        </Environment>
+      )}
+
+      {/* CH0 — hero bottle (animated: runs The Opening choreography) */}
       <group position={[0, 0, 0]}>
-        <Bottle />
+        <HeroBottle animated tier={tier} speckCount={tier === 3 ? 650 : tier === 2 ? 380 : 170} />
       </group>
+
+      {/* The Opening's landing stage: a dark glossy paint panel beside
+          the bottle — the droplet's film sweeps across it, bridging
+          straight into the Science chapter's ultra-thin-layer story. */}
+      <mesh position={[-0.4, 0.006, -1.9]} rotation={[-Math.PI / 2, 0, 0.18]}>
+        <planeGeometry args={[3.0, 2.5]} />
+        <meshStandardMaterial color="#0E100F" roughness={0.07} metalness={0.85} />
+      </mesh>
       <StationText
         station="top"
         lines={HERO.headline}
@@ -82,9 +103,9 @@ export default function World({ tier }: { tier: Tier }) {
         anchorX="left"
       />
 
-      {/* finale — the bottle again, waiting at the pre-order threshold */}
+      {/* finale — the bottle again, cap closed: the reset beat */}
       <group position={[0, 0, -30]} rotation={[0, Math.PI * 0.12, 0]}>
-        <Bottle />
+        <HeroBottle tier={tier} />
       </group>
     </>
   );
@@ -102,8 +123,10 @@ function Lights({ tier }: { tier: Tier }) {
     <>
       {/* Showroom fill (owner directive): surfaces and edges must read
           in wide shots, not only under the key light. */}
-      <ambientLight intensity={tier === 1 ? 0.75 : 0.55} color="#A6AEA1" />
-      <hemisphereLight args={["#3A403B", "#232622", 0.5]} />
+      <ambientLight intensity={tier === 1 ? 0.85 : 0.55} color="#A6AEA1" />
+      {/* hemisphere shading multiplies every material's per-pixel cost —
+          the floor tier compensates with the higher flat ambient above */}
+      {tier > 1 && <hemisphereLight args={["#3A403B", "#232622", 0.5]} />}
       {/* warm champagne key — the brand's light */}
       <spotLight
         ref={key}
@@ -180,10 +203,10 @@ function Dust({ tier }: { tier: Tier }) {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
       <pointsMaterial
-        size={0.02}
+        size={0.011}
         color={CHAMPAGNE_BRIGHT}
         transparent
-        opacity={0.32}
+        opacity={0.18}
         sizeAttenuation
         blending={THREE.AdditiveBlending}
         depthWrite={false}

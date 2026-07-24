@@ -3,16 +3,18 @@
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import Hero from "@/components/sections/Hero";
+import Opening from "@/components/sections/Opening";
 import Science from "@/components/sections/Science";
 import Application from "@/components/sections/Application";
 import Result from "@/components/sections/Result";
 import FooterConversion from "@/components/sections/FooterConversion";
 import { setRanges, type StationRange } from "@/lib/journey";
+import { ScrollTrigger } from "@/lib/gsap";
 
 /** The canvas mounts client-side only — three.js has no SSR story. */
 const Experience = dynamic(() => import("@/components/webgl/Experience"), { ssr: false });
 
-const STATION_IDS = ["top", "science", "application", "result", "shop"] as const;
+const STATION_IDS = ["top", "opening", "science", "application", "result", "shop"] as const;
 
 /**
  * WebGL mode composition: the fixed canvas world behind, the DOM copy
@@ -39,6 +41,10 @@ export default function WebglPage() {
         ranges.push({ id, start, end, center });
       }
       setRanges(ranges, max);
+      // The WebGL layout (Opening runway etc.) mounts after the initial
+      // static render — every DOM ScrollTrigger must re-measure or the
+      // rail and reveals fire at stale offsets.
+      ScrollTrigger.refresh();
     };
 
     measure();
@@ -69,6 +75,7 @@ export default function WebglPage() {
       {/* DOM journey above the canvas */}
       <div className="relative z-10">
         <Hero webgl />
+        <Opening />
         <Science webgl />
         <Application webgl />
         <Result webgl />

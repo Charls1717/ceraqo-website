@@ -3,7 +3,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import { getRanges, scrollProgress } from "@/lib/journey";
+import { getRanges, rangeOf, scrollProgress } from "@/lib/journey";
 
 /**
  * Camera on a curve. Two CatmullRom splines — one for the eye, one for
@@ -19,6 +19,7 @@ import { getRanges, scrollProgress } from "@/lib/journey";
 
 const EYES: [number, number, number][] = [
   [2.6, 1.5, 7.0], // CH0 hero — wide, bottle right of frame
+  [0.95, 1.55, 1.75], // THE OPENING — extreme close on the cap/neck
   [-3.4, 0.75, -3.2], // CH1 science — low glide toward the lattice
   [3.6, 1.35, -10.6], // CH2 application — over the panel
   [-3.0, 0.9, -18.2], // CH3 result — among the droplets
@@ -27,6 +28,7 @@ const EYES: [number, number, number][] = [
 
 const LOOKS: [number, number, number][] = [
   [0.0, 0.62, 0.0], // the hero bottle
+  [0.05, 1.3, 0.0], // the cap (Opening look tilts down via lookAdjust)
   [-4.8, 0.35, -7.6], // lattice heart
   [4.9, 0.3, -14.4], // the gliding pad
   [-4.4, 0.25, -22.4], // droplet cluster
@@ -86,6 +88,30 @@ export default function ScrollRig() {
     const u = remap(smoothT.current);
     eyeCurve.getPoint(u, eye);
     lookCurve.getPoint(u, look);
+
+    // Inside The Opening the gaze follows the droplet down from the cap
+    // to the floor and back up — a per-station adjustment the static
+    // keyframe pair can't express.
+    const opening = rangeOf("opening");
+    if (opening) {
+      const po = THREE.MathUtils.clamp(
+        (smoothT.current - opening.start) / Math.max(1e-5, opening.end - opening.start),
+        0,
+        1,
+      );
+      if (po > 0 && po < 1) {
+        // Follow the droplet down through impact/film, then release as
+        // the camera's natural departure (which passes over the test
+        // panel) carries the sweep finale.
+        const follow =
+          THREE.MathUtils.smoothstep(po, 0.42, 0.55) *
+          (1 - THREE.MathUtils.smoothstep(po, 0.74, 0.9));
+        look.y -= follow * 1.15;
+        look.x += follow * 0.5;
+        look.z += follow * 0.55;
+        eye.y -= follow * 0.3;
+      }
+    }
 
     // The camera is never dead-still: a slow handheld-crane drift keeps
     // the frame alive at station dwells (and reads as parallax against

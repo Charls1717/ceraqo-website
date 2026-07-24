@@ -14,6 +14,11 @@ export const HERO = {
   cueTarget: "01 / The Science",
 };
 
+export const OPENING = {
+  kicker: "Chapter 00 / The opening",
+  note: "One drop is where protection begins.",
+};
+
 export const CHAPTERS = [
   { id: "science", index: "01", label: "Science", title: "The Science" },
   { id: "application", index: "02", label: "Application", title: "The Application" },

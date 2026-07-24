@@ -271,10 +271,11 @@ test.describe('snap dive (part 1)', () => {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       await cdp.detach();
     };
-    // Approach: swipe until captured
-    for (let i = 0; i < 14; i++) {
+    // Approach: swipe until captured (the page above the dive now spans
+    // hero + the Opening's scrub track + intro)
+    for (let i = 0; i < 44; i++) {
       await swipeUp();
-      await page.waitForTimeout(350);
+      await page.waitForTimeout(300);
       if ((await dive(page))?.captured) break;
     }
     await page.waitForFunction(() => window.__diveState?.captured === true, undefined, {

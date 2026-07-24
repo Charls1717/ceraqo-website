@@ -3,7 +3,6 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Hero from './components/Hero';
-import Opening from './components/Opening';
 import Intro from './components/Intro';
 import Dive from './components/Dive';
 import Preloader from './components/Preloader';
@@ -75,7 +74,6 @@ export default function App() {
     <>
       <Preloader progress={progress} done={started} />
       <Hero assets={assets} on={started} />
-      <Opening />
       <Intro />
       <Dive assets={assets} active={started} />
       <PostDive />

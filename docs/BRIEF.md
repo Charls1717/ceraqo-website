@@ -21,10 +21,29 @@ The owner's final brief adds, on top of the WebGL directive:
    no void background, no gloss at frame 0, transformation mostly in the
    second half, one continuous camera move. (The 2026-07-24 `payoff-test.mp4`
    v1 clip violates the rim/underglow rule — regenerate at step 3.)
-5. **Execution order is test-and-approve:** background fix → approval →
-   Parts A+B demo → approval → one Payoff test clip → approval → rest.
-   The brief text after "test clip for the Payoff chapter (car + bott…"
-   arrived truncated; owner to re-send the remainder.
+5. **Execution order is test-and-approve** (tail re-sent by owner
+   2026-07-24, now complete):
+   1. Global background fix → approval. ✅ approved
+   2. Parts A+B demo → approval. ✅ built; owner ratified amber-liquid
+      and scan-retirement decisions; static-fallback gap fixed
+      (see §6)
+   3. ONE Payoff test clip (car + bottle together, full transformation
+      + water-beading moment) PLUS one comparison clip from a second
+      strong-consistency model. Contact sheets (start/25/50/75/end) +
+      playable links. STOP for explicit approval.
+   4. On approval: wire Payoff clip via ScrollScrubber.
+   5. Process-chapter clip (bottle applied to car panel): generate,
+      review, approve, wire.
+   6. Remaining touches with approved Part A/B assets: feature-grid
+      micro-vignettes, kit "reset" beat, footer bookend.
+   7. Final pass: mobile performance + reduced-motion fallback across
+      every layer and chapter.
+6. **Fallback completeness rule (learned 2026-07-24):** every animated
+   layer must exist in the static experience as a fallback image — the
+   Opening's omission there is exactly how "the scene doesn't play"
+   reached the owner. `SiteExperience` now logs which experience was
+   chosen and why (`[CERAQO] experience: …`) so mode questions are
+   answerable from any machine's console.
 
 ## Rendering directive (current)
 

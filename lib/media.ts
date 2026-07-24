@@ -60,4 +60,8 @@ export const MEDIA = {
   ambientMenu: {
     mp4: asset("/media/ambient-menu.mp4"),
   } as VideoAsset,
+
+  /** The Opening's static fallback still (rendered from the WebGL scene
+   *  at the film moment — see scripts/build-opening-still.mjs). */
+  openingStill: asset("/media/opening-still.webp"),
 } as const;

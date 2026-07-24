@@ -2,6 +2,30 @@
 
 **Status: authoritative, confirmed by the client on 2026-07-24.**
 
+## 2026-07-24 evening — "Full scroll story redesign" (v3, supersedes below where in conflict)
+
+The owner's final brief adds, on top of the WebGL directive:
+
+1. **Global background fix (approved-first step):** page ground is a
+   graphite-green charcoal (#1c1f1e–#232622 band, dusk-showroom
+   gradient), never near-black; near-black only as local accents.
+   Implemented 2026-07-24 (tokens, body gradient, scene fog/backdrop/
+   fill lights) — awaiting owner approval.
+2. **Bottle throughline:** the bottle must be visible in every chapter;
+   a missing bottle in generated footage is a regeneration requirement.
+3. **Part A:** bottle material/label upgrade in WebGL. **Part B:** "The
+   Opening" scroll-scrubbed cap-open/droplet/nanolayer scene bridging
+   Hero → Science. **Part C:** Higgsfield car-transformation clips into
+   a `<ScrollScrubber>` frame-sequence component.
+4. **Hard negatives for car footage:** no glowing rims/underglow/neon,
+   no void background, no gloss at frame 0, transformation mostly in the
+   second half, one continuous camera move. (The 2026-07-24 `payoff-test.mp4`
+   v1 clip violates the rim/underglow rule — regenerate at step 3.)
+5. **Execution order is test-and-approve:** background fix → approval →
+   Parts A+B demo → approval → one Payoff test clip → approval → rest.
+   The brief text after "test clip for the Payoff chapter (car + bott…"
+   arrived truncated; owner to re-send the remainder.
+
 ## Rendering directive (current)
 
 The site is a **real-time WebGL experience**: three.js via

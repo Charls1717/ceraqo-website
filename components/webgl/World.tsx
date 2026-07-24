@@ -27,7 +27,11 @@ const INK = new THREE.Color("#0A0B0C");
 export default function World({ tier }: { tier: Tier }) {
   return (
     <>
+      {/* Atmospheric depth toward the showroom ground tone — distant
+          geometry dissolves into lit haze instead of a black void. */}
+      <fog attach="fog" args={["#1E211F", 16, 52]} />
       <Lights tier={tier} />
+      <Backdrop />
       <Floor tier={tier} />
       <Dust tier={tier} />
 
@@ -96,7 +100,10 @@ function Lights({ tier }: { tier: Tier }) {
   });
   return (
     <>
-      <ambientLight intensity={tier === 1 ? 0.42 : 0.22} color="#8A939F" />
+      {/* Showroom fill (owner directive): surfaces and edges must read
+          in wide shots, not only under the key light. */}
+      <ambientLight intensity={tier === 1 ? 0.75 : 0.55} color="#A6AEA1" />
+      <hemisphereLight args={["#3A403B", "#232622", 0.5]} />
       {/* warm champagne key — the brand's light */}
       <spotLight
         ref={key}
@@ -108,7 +115,7 @@ function Lights({ tier }: { tier: Tier }) {
         distance={60}
       />
       {/* cool-neutral fill, never blue-saturated */}
-      <directionalLight position={[-6, 4, -2]} intensity={0.5} color="#B9BEC6" />
+      <directionalLight position={[-6, 4, -2]} intensity={0.7} color="#BCC1BB" />
       {/* the hero bottle's own accent — distance-limited, all tiers,
           so the product reads even at the software floor */}
       <pointLight position={[1.5, 1.4, 2.0]} intensity={16} color="#E6C99C" distance={9} />
@@ -121,6 +128,17 @@ function Lights({ tier }: { tier: Tier }) {
   );
 }
 
+/** The showroom shell: a broad backdrop wall that catches the fill
+ *  light, so wide shots read as a physical space, not a void. */
+function Backdrop() {
+  return (
+    <mesh position={[0, 8, -44]}>
+      <planeGeometry args={[110, 30]} />
+      <meshLambertMaterial color="#262A27" />
+    </mesh>
+  );
+}
+
 /** One long dark-lacquer floor under the whole journey. */
 function Floor({ tier }: { tier: Tier }) {
   return (
@@ -130,9 +148,9 @@ function Floor({ tier }: { tier: Tier }) {
           tier it trades PBR for Lambert, the single biggest software
           fill-rate saving in the scene. */}
       {tier === 1 ? (
-        <meshLambertMaterial color="#14161A" />
+        <meshLambertMaterial color="#222623" />
       ) : (
-        <meshStandardMaterial color="#101215" roughness={0.16} metalness={0.72} />
+        <meshStandardMaterial color="#202422" roughness={0.18} metalness={0.65} />
       )}
     </mesh>
   );

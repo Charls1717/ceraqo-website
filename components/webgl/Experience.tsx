@@ -126,7 +126,7 @@ export default function Experience() {
         dpr={dpr}
         camera={{ fov: 42, near: 0.1, far: 90, position: [2.6, 1.5, 7] }}
         gl={{ antialias: !software, powerPreference: "high-performance" }}
-        onCreated={({ gl }) => gl.setClearColor(new THREE.Color("#0A0B0C"))}
+        onCreated={({ gl }) => gl.setClearColor(new THREE.Color("#1E211F"))}
       >
         <PerformanceMonitor
           // Step quality down under sustained load, back up with headroom.

@@ -158,7 +158,7 @@ export default function AmbientVideo({
       {dim > 0 && (
         <div
           className="absolute inset-0"
-          style={{ background: `rgb(10 11 12 / ${dim})` }}
+          style={{ background: `rgb(30 33 31 / ${dim})` }}
         />
       )}
     </div>

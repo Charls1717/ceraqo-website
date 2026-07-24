@@ -62,7 +62,7 @@ export default function WebglPage() {
         className="pointer-events-none fixed inset-0 z-[1]"
         style={{
           background:
-            "radial-gradient(120% 95% at 50% 45%, transparent 55%, rgb(10 11 12 / 0.8) 100%)",
+            "radial-gradient(120% 95% at 50% 45%, transparent 58%, rgb(30 33 31 / 0.7) 100%)",
         }}
         aria-hidden
       />

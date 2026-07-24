@@ -18,7 +18,7 @@ export default function Effects({ tier }: { tier: Tier }) {
   return (
     <EffectComposer multisampling={0}>
       <Bloom intensity={0.32} luminanceThreshold={0.8} luminanceSmoothing={0.2} mipmapBlur />
-      <Vignette eskil={false} offset={0.18} darkness={0.72} />
+      <Vignette eskil={false} offset={0.16} darkness={0.5} />
     </EffectComposer>
   );
 }

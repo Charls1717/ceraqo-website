@@ -26,9 +26,15 @@ html.lenis body {
 }
 
 body {
-  @apply bg-ink font-body text-bone antialiased;
+  @apply font-body text-bone antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: clip;
+  /* Showroom-at-dusk ground: a soft warm glow falling from the upper
+     right over a graphite-green vertical drift — never a flat void. */
+  background:
+    radial-gradient(140% 90% at 78% -5%, rgb(64 62 48 / 0.4), transparent 55%),
+    linear-gradient(180deg, #232622 0%, #1e211f 55%, #1c1f1e 100%);
+  background-attachment: fixed;
 }
 
 ::selection {
@@ -161,8 +167,8 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(120% 90% at 50% 42%, transparent 42%, rgb(10 11 12 / 0.78) 100%),
-    linear-gradient(rgb(10 11 12 / 0.22), rgb(10 11 12 / 0.22));
+    radial-gradient(120% 90% at 50% 42%, transparent 48%, rgb(30 33 31 / 0.7) 100%),
+    linear-gradient(rgb(30 33 31 / 0.16), rgb(30 33 31 / 0.16));
 }
 
 /* ------------------------------------------------------------------ */
@@ -268,8 +274,8 @@ body {
   z-index: -1;
   background: radial-gradient(
     110% 100% at 30% 50%,
-    rgb(10 11 12 / 0.78) 30%,
-    rgb(10 11 12 / 0.35) 62%,
+    rgb(30 33 31 / 0.8) 30%,
+    rgb(30 33 31 / 0.38) 62%,
     transparent 100%
   );
   filter: blur(2px);

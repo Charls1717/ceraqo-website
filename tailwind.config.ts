@@ -12,12 +12,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0A0B0C", // page ground
-        graphite: "#101215",
-        gunmetal: "#181B20",
-        smoke: "#23272E",
-        seam: "#2E333B", // hairline borders
-        steel: "#8A939F", // desaturated secondary text
+        /* "Dimly lit high-end showroom at dusk" (owner directive):
+           the ground is a graphite-green charcoal in the #1c1f1e–#232622
+           band, never pitch black — near-black survives only as small
+           local accents (droplets, tire shadows, deep reflections). */
+        ink: "#1E211F", // page ground
+        graphite: "#262A27",
+        gunmetal: "#2E332F",
+        smoke: "#3A403B",
+        seam: "#474D48", // hairline borders
+        steel: "#99A29B", // desaturated secondary text
         bone: "#F2EFE9", // warm off-white headline fill
         champagne: {
           DEFAULT: "#C9A67A",

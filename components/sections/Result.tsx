@@ -12,23 +12,28 @@ import { MEDIA } from "@/lib/media";
  * Scene 1: water-beading payoff macro behind the gloss statements.
  * Scene 2: gloss reflection still behind maintenance + provenance.
  */
-export default function Result() {
+export default function Result({ webgl = false }: { webgl?: boolean }) {
   return (
     <Chapter
       id="result"
+      bare={webgl}
       scenes={[
         { key: "beading", video: MEDIA.resultBeading },
         { key: "gloss", still: MEDIA.glossStill },
       ]}
     >
-      {/* 03a — the payoff */}
+      {/* 03a — the payoff (headline in-scene in WebGL mode) */}
       <div data-sub className="flex min-h-screen items-center px-6 md:px-14 lg:px-20">
-        <div className="w-full max-w-5xl pt-28">
+        <div className={`w-full max-w-5xl pt-28 ${webgl ? "webgl-copy relative" : ""}`}>
           <Fade className="micro mb-6 text-champagne">{RESULT.gloss.kicker}</Fade>
-          <RevealHeadline
-            lines={RESULT.gloss.headline}
-            className="text-[11vw] md:text-[6.2vw] lg:text-[5vw]"
-          />
+          {webgl ? (
+            <h2 className="sr-only">{RESULT.gloss.headline.join(" ")}</h2>
+          ) : (
+            <RevealHeadline
+              lines={RESULT.gloss.headline}
+              className="text-[11vw] md:text-[6.2vw] lg:text-[5vw]"
+            />
+          )}
 
           {/* the approved experience lines, revealed one by one */}
           <ul className="mt-10 max-w-xl">

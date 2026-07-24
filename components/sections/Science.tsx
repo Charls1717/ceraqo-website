@@ -14,23 +14,28 @@ import { MEDIA } from "@/lib/media";
  * Scene 1: the crystalline layer curing (Higgsfield macro loop).
  * Scene 2: the coating cross-section still behind the technology pillars.
  */
-export default function Science() {
+export default function Science({ webgl = false }: { webgl?: boolean }) {
   return (
     <Chapter
       id="science"
+      bare={webgl}
       scenes={[
         { key: "crystal", video: MEDIA.scienceCrystal },
         { key: "layer", still: MEDIA.scienceLayerStill },
       ]}
     >
-      {/* 01a — the invisible shield */}
+      {/* 01a — the invisible shield (headline lives in-scene in WebGL mode) */}
       <div data-sub className="flex min-h-screen items-center px-6 md:px-14 lg:px-20">
-        <div className="max-w-3xl pt-28">
+        <div className={`max-w-3xl pt-28 ${webgl ? "webgl-copy relative" : ""}`}>
           <Fade className="micro mb-6 text-champagne">{SCIENCE.shield.kicker}</Fade>
-          <RevealHeadline
-            lines={SCIENCE.shield.headline}
-            className="text-[11vw] md:text-[6.2vw] lg:text-[5vw]"
-          />
+          {webgl ? (
+            <h2 className="sr-only">{SCIENCE.shield.headline.join(" ")}</h2>
+          ) : (
+            <RevealHeadline
+              lines={SCIENCE.shield.headline}
+              className="text-[11vw] md:text-[6.2vw] lg:text-[5vw]"
+            />
+          )}
           <Fade className="prose-block mt-8">{SCIENCE.shield.body}</Fade>
         </div>
       </div>

@@ -18,6 +18,12 @@ interface Props {
   scenes: Scene[];
   children: ReactNode;
   className?: string;
+  /**
+   * WebGL mode: the live three.js world is the background, so the
+   * sticky scene stage is skipped entirely and subsections flow as
+   * plain content above the canvas.
+   */
+  bare?: boolean;
 }
 
 /**
@@ -33,12 +39,13 @@ interface Props {
  *
  * Subsections must carry `data-sub` in DOM order matching `scenes`.
  */
-export default function Chapter({ id, scenes, children, className = "" }: Props) {
+export default function Chapter({ id, scenes, children, className = "", bare = false }: Props) {
   const rootRef = useRef<HTMLElement>(null);
   const cinematic = useCinematic();
   const [activeScene, setActiveScene] = useState(0);
 
   useEffect(() => {
+    if (bare) return;
     const root = rootRef.current;
     if (!root) return;
 
@@ -99,7 +106,15 @@ export default function Chapter({ id, scenes, children, className = "" }: Props)
     }, root);
 
     return () => ctx.revert();
-  }, [cinematic, scenes.length]);
+  }, [cinematic, scenes.length, bare]);
+
+  if (bare) {
+    return (
+      <section ref={rootRef} id={id} className={`relative ${className}`}>
+        {children}
+      </section>
+    );
+  }
 
   return (
     <section ref={rootRef} id={id} className={`relative ${className}`}>

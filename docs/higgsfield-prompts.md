@@ -206,6 +206,19 @@ egress). Curated masters land in `bridge/review/`;
 
 ---
 
+## 6 · BOTTLE 3D SCAN (WebGL build)
+
+- **Model**: `image_to_3d`, source: the real product photo (media
+  `bbfa07bc`), no prompt
+- **Job (shipped)**: `850d0852-f334-4c0a-ac50-f774faa22cf3` — textured,
+  21.5k vertices → texture stripped (failed the label-crispness gate:
+  garbled UV islands), geometry ships as `public/models/bottle-scan.glb`
+  with the decal + collar overlays (see docs/BRIEF.md → bottle rule)
+- **Job (geometry-only twin)**: `355dcd32-f002-4d8a-b2de-4617d27b5bde`
+- **Historical**: the original `sam_3_3d` scan
+  (`2049c53f-6a32-4471-9664-fb120e1b7f44`, July 13) — its stored asset
+  URL now returns 403; superseded by the jobs above
+
 ## Superseded during this build (do not use)
 
 Queued before the palette directive landed, replaced the same day and

@@ -52,9 +52,12 @@ export default function FooterConversion() {
           />
           <Fade className="prose-block mt-8">{FOOTER.body}</Fade>
 
+          {/* Conversion elements stay out of the reveal choreography —
+              a deep link straight to #shop must always find them
+              visible, whatever the scroll state. */}
           <div className="mt-14 grid gap-14 md:grid-cols-2 md:gap-10">
             {/* primary CTA — wire to the live shop when it exists */}
-            <Fade as="div">
+            <div>
               <motion.a
                 href="#shop"
                 onClick={(e) => e.preventDefault()}
@@ -64,15 +67,15 @@ export default function FooterConversion() {
                 whileTap={{ scale: 0.97 }}
                 transition={{ type: "tween", ease: [0.19, 1, 0.22, 1], duration: 0.5 }}
               >
-                Shop Q-ARMOR™ Now
+                {FOOTER.cta}
               </motion.a>
               <p id="shop-note" className="micro mt-4 text-steel">
                 Launching 2026 — join the list for priority access
               </p>
-            </Fade>
+            </div>
 
             {/* newsletter capture */}
-            <Fade as="div" index={1}>
+            <div>
               <h3 className="font-body text-lg font-medium text-bone/90">
                 {FOOTER.newsletter.title}
               </h3>
@@ -111,7 +114,7 @@ export default function FooterConversion() {
                   )}
                 </form>
               )}
-            </Fade>
+            </div>
           </div>
 
           {/* legal */}

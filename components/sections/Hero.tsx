@@ -16,7 +16,7 @@ import { MEDIA } from "@/lib/media";
  * holds while the content parallaxes away — the first taste of the
  * scroll grammar used by every chapter.
  */
-export default function Hero() {
+export default function Hero({ webgl = false }: { webgl?: boolean }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const cinematic = useCinematic();
   const reduced = useReducedMotion();
@@ -55,6 +55,33 @@ export default function Hero() {
 
     return () => ctx.revert();
   }, [cinematic, reduced]);
+
+  if (webgl) {
+    /* WebGL mode: the canvas world carries the bottle and the
+       "SURFACE. REDEFINED." troika headline — the DOM contributes the
+       kicker, positioning statement and scroll cue, anchored low-left
+       so they never fight the in-scene type. An sr-only h1 keeps the
+       document outline and crawlers whole. */
+    return (
+      <section id="top" className="relative h-[135vh]">
+        <div className="sticky top-0 h-screen overflow-hidden">
+          <h1 className="sr-only">{HERO.headline.join(" ")}</h1>
+          <div
+            ref={contentRef}
+            className="webgl-copy absolute bottom-28 left-6 z-[3] max-w-xl md:left-14 lg:left-20"
+          >
+            <p data-hero-fade className="micro mb-5 text-champagne">
+              {HERO.kicker}
+            </p>
+            <p data-hero-fade className="prose-block">
+              {HERO.sub}
+            </p>
+          </div>
+          <ScrollCue label={HERO.cue} target={HERO.cueTarget} />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="top" className="relative h-[135vh]">

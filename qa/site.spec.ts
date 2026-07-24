@@ -81,6 +81,10 @@ test("newsletter capture validates and confirms", async ({ page }) => {
   await settle(page);
 
   const input = page.getByLabel("Email address");
+  // Short viewports leave the form below the fold in its pre-reveal
+  // state — bring it on stage so its scroll entrance fires.
+  await input.scrollIntoViewIfNeeded();
+  await settle(page, 700);
   await input.fill("not-an-email");
   await page.getByRole("button", { name: /join/i }).click();
   // p[role=alert] specifically — Next.js renders its own route-announcer alert

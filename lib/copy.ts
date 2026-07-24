@@ -139,7 +139,8 @@ export const MENU = {
 
 export const FOOTER = {
   kicker: "The future of surface protection",
-  headline: ["SHOP", "Q-ARMOR™ NOW."],
+  headline: ["PRE-ORDER", "Q-ARMOR™ NOW."],
+  cta: "Pre-Order Q-ARMOR™",
   body: "Welcome to the future of surface protection. Welcome to CERAQO™.", // verbatim closing line
   newsletter: {
     title: "Join the CERAQO newsletter",

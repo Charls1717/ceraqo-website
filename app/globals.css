@@ -252,3 +252,25 @@ body {
   border: 1px solid rgb(46 51 59 / 0.55);
   backdrop-filter: blur(8px);
 }
+
+/* In WebGL mode copy floats over the live scene — a soft directional
+   scrim keeps it readable without boxing it in. The element must carry
+   its own positioning utility (absolute/relative); this class only
+   isolates the stacking context so the ::before can sit behind the
+   text without escaping under the page. */
+.webgl-copy {
+  isolation: isolate;
+}
+.webgl-copy::before {
+  content: "";
+  position: absolute;
+  inset: -3rem -4rem;
+  z-index: -1;
+  background: radial-gradient(
+    110% 100% at 30% 50%,
+    rgb(10 11 12 / 0.78) 30%,
+    rgb(10 11 12 / 0.35) 62%,
+    transparent 100%
+  );
+  filter: blur(2px);
+}

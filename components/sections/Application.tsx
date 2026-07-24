@@ -14,23 +14,28 @@ import { MEDIA } from "@/lib/media";
  * Scene 1: the applicator-pad wipe loop behind the three steps.
  * Scene 2: the three-piece kit still behind owners + kit contents.
  */
-export default function Application() {
+export default function Application({ webgl = false }: { webgl?: boolean }) {
   return (
     <Chapter
       id="application"
+      bare={webgl}
       scenes={[
         { key: "wipe", video: MEDIA.applicationWipe },
         { key: "kit", still: MEDIA.kitStill },
       ]}
     >
-      {/* 02a — professional results, simple process */}
+      {/* 02a — professional results, simple process (headline in-scene in WebGL mode) */}
       <div data-sub className="flex min-h-screen items-center px-6 md:px-14 lg:px-20">
-        <div className="w-full max-w-5xl pt-28">
+        <div className={`w-full max-w-5xl pt-28 ${webgl ? "webgl-copy relative" : ""}`}>
           <Fade className="micro mb-6 text-champagne">{APPLICATION.process.kicker}</Fade>
-          <RevealHeadline
-            lines={APPLICATION.process.headline}
-            className="text-[11vw] md:text-[6.2vw] lg:text-[5vw]"
-          />
+          {webgl ? (
+            <h2 className="sr-only">{APPLICATION.process.headline.join(" ")}</h2>
+          ) : (
+            <RevealHeadline
+              lines={APPLICATION.process.headline}
+              className="text-[11vw] md:text-[6.2vw] lg:text-[5vw]"
+            />
+          )}
           <Fade className="prose-block mt-8">{APPLICATION.process.body}</Fade>
 
           {/* three-step indicator */}

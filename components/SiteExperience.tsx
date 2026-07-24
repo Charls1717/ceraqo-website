@@ -38,6 +38,9 @@ export default function SiteExperience() {
   const [mode, setMode] = useState<"static" | "webgl" | null>(null);
 
   useEffect(() => {
+    // `reduced` is already override-aware: `?motion=force` (see
+    // lib/usePrefs.ts) reports false here even when the OS asks for
+    // reduced motion, which routes those visitors into the WebGL world.
     setMode(!reduced && probeGl().webgl2 ? "webgl" : "static");
   }, [reduced]);
 

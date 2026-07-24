@@ -23,6 +23,30 @@ declare global {
   }
 }
 
+test.describe("motion override", () => {
+  test("?motion=force serves WebGL under a reduced-motion preference", async ({ page }) => {
+    test.skip(
+      test.info().project.name !== "reduced-motion",
+      "meaningful only where reduced motion would normally serve the static site",
+    );
+
+    // Control: without the override, reduced motion gets the static site.
+    await page.goto("/");
+    await page.waitForTimeout(2500);
+    expect(await page.evaluate(() => !!window.__CERAQO_GL__)).toBe(false);
+
+    // Override: the full WebGL world mounts despite the OS preference.
+    await page.goto("/?motion=force");
+    await page.waitForFunction(() => !!window.__CERAQO_GL__, undefined, { timeout: 30_000 });
+    const forced = await page.evaluate(() => ({
+      context: window.__CERAQO_GL__!.context,
+      camera: window.__CERAQO_GL__!.camera(),
+    }));
+    console.log("MOTION_FORCE_RAW", JSON.stringify(forced));
+    expect(forced.context).toBe("webgl2");
+  });
+});
+
 test.describe("webgl evidence", () => {
   test.beforeEach(() => {
     test.skip(

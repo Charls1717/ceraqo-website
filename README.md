@@ -51,6 +51,10 @@ decal from the real photo, `public/images/bottle-hero.png`);
   or no WebGL2 serves the static experience — the same sections over
   Higgsfield stills, fully visible without animation. The bottle GLB
   falls back to a procedural body if it ever fails to load.
+- **Preview override**: append `?motion=force` to the URL to run the
+  full WebGL experience (and all scroll animation) even where the OS
+  requests reduced motion — for client review only; it can't help
+  browsers without WebGL2.
 - **Copy** (`lib/copy.ts`): claims marked *verbatim* are the client's
   approved datasheet wording — do not paraphrase them into stronger
   claims.

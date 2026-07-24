@@ -19,9 +19,28 @@ function useMediaQuery(query: string): boolean {
   );
 }
 
-/** User asked the OS for less motion — serve the static experience. */
+/**
+ * Preview override: `?motion=force` in the URL makes the site behave as
+ * if no reduced-motion preference were set — the full WebGL experience,
+ * Lenis and every scroll reveal run regardless of OS settings. Built
+ * for client review on machines where reduced motion is enabled
+ * system-wide. It cannot conjure WebGL2 where the browser has none —
+ * those visitors still get the static experience.
+ */
+function motionForced(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return new URLSearchParams(window.location.search).get("motion") === "force";
+  } catch {
+    return false;
+  }
+}
+
+/** User asked the OS for less motion — serve the static experience
+ *  (unless the `?motion=force` preview override is present). */
 export function useReducedMotion(): boolean {
-  return useMediaQuery("(prefers-reduced-motion: reduce)");
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  return reduced && !motionForced();
 }
 
 /**

@@ -4,11 +4,15 @@
 /* ------------------------------------------------------------------ */
 
 :root {
-  /* Depth-graded blacks: graphite at the surface, pure black at depth */
-  --c-black: #030405;
-  --c-graphite: #121519;
-  --c-graphite-2: #0a0c0f;
-  --c-panel: #0b0d10;
+  /* Showroom-at-dusk graphites: green-tinted charcoal with warm air in
+     it — never a pitch-black void. True near-black (--c-ink) is kept
+     for small local accents only: vignette edges, deep shadows. */
+  --c-bg: #1d201e;
+  --c-stage: #1b1e1c;
+  --c-graphite: #262a27;
+  --c-graphite-2: #212523;
+  --c-panel: #232724;
+  --c-ink: #0c0e0d;
 
   /* Quartz-cyan accent */
   --c-cyan: #5ce9e4;
@@ -20,10 +24,12 @@
   --c-champagne: #c8a878;
   --c-champagne-dim: rgba(200, 168, 120, 0.55);
 
+  /* Lifted for the lighter ground: dim copy holds ≥4.5:1 on every
+     section tone (measured 4.7:1 on the lightest graphite). */
   --c-text: #eef2f2;
-  --c-text-mid: #a7b0b3;
-  --c-text-dim: #626c70;
-  --c-line: rgba(238, 242, 242, 0.1);
+  --c-text-mid: #aeb7b7;
+  --c-text-dim: #8b9595;
+  --c-line: rgba(238, 242, 242, 0.13);
 
   --font-sans: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
 
@@ -59,7 +65,7 @@ html {
 
 html,
 body {
-  background: var(--c-black);
+  background: var(--c-bg);
   color: var(--c-text);
   font-family: var(--font-sans);
   font-weight: 300;
@@ -96,7 +102,7 @@ a {
 
 ::selection {
   background: var(--c-cyan);
-  color: var(--c-black);
+  color: var(--c-ink);
 }
 
 /* Focus visibility */

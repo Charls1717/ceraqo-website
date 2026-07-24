@@ -58,8 +58,8 @@
   justify-content: center;
   gap: 2.4rem;
   background:
-    radial-gradient(120% 90% at 50% 110%, rgba(92, 233, 228, 0.05), transparent 55%),
-    var(--c-black);
+    radial-gradient(120% 90% at 50% 110%, rgba(92, 233, 228, 0.06), transparent 55%),
+    var(--c-bg);
   transition: opacity 0.9s var(--ease-out), visibility 0.9s;
 }
 
@@ -123,7 +123,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: var(--c-black);
+  background: var(--c-stage);
 }
 
 /* Stills + transition videos share one cover-fit stack; the state
@@ -151,8 +151,8 @@
   z-index: 2;
   pointer-events: none;
   background:
-    radial-gradient(140% 100% at 50% 0%, rgba(18, 21, 25, 0.45), transparent 60%),
-    linear-gradient(180deg, rgba(3, 4, 5, 0) 58%, rgba(3, 4, 5, 0.5) 100%);
+    radial-gradient(140% 100% at 50% 0%, rgba(38, 42, 39, 0.4), transparent 60%),
+    linear-gradient(180deg, rgba(12, 14, 13, 0) 62%, rgba(12, 14, 13, 0.34) 100%);
 }
 
 .dive-vignette {
@@ -160,7 +160,7 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: radial-gradient(125% 125% at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.46) 100%);
+  background: radial-gradient(125% 125% at 50% 50%, transparent 64%, rgba(12, 14, 13, 0.32) 100%);
 }
 
 /* Fine static grain keeps the gradients filmic instead of digital */
@@ -360,7 +360,7 @@
   content: '';
   position: absolute;
   inset: -3rem -5rem -3rem -6rem;
-  background: radial-gradient(70% 85% at 38% 50%, rgba(3, 4, 5, 0.58), transparent 78%);
+  background: radial-gradient(70% 85% at 38% 50%, rgba(16, 19, 17, 0.52), transparent 78%);
   z-index: -1;
   pointer-events: none;
 }
@@ -469,8 +469,9 @@
 .post {
   position: relative;
   background:
-    radial-gradient(90% 60% at 50% 0%, rgba(92, 233, 228, 0.04), transparent 60%),
-    linear-gradient(180deg, var(--c-black), var(--c-graphite-2) 30%, var(--c-black));
+    radial-gradient(90% 60% at 50% 0%, rgba(92, 233, 228, 0.05), transparent 60%),
+    radial-gradient(70% 42% at 80% 74%, rgba(200, 168, 120, 0.05), transparent 70%),
+    linear-gradient(180deg, var(--c-stage), var(--c-graphite) 30%, var(--c-bg) 66%, var(--c-stage));
 }
 
 .section {
@@ -688,7 +689,8 @@
   gap: 1.2rem;
   align-items: baseline;
   justify-content: space-between;
-  background: var(--c-black);
+  background: var(--c-graphite-2);
+  border-top: 1px solid var(--c-line);
 }
 
 .footer__mark {
@@ -714,7 +716,7 @@
   height: 100vh;
   height: 100svh;
   overflow: hidden;
-  background: var(--c-black);
+  background: var(--c-bg);
 }
 
 .hero__bg {
@@ -745,8 +747,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(3, 4, 5, 0.5), rgba(3, 4, 5, 0.08) 42%, rgba(3, 4, 5, 0.78) 100%),
-    radial-gradient(90% 70% at 22% 78%, rgba(3, 4, 5, 0.55), transparent 60%);
+    linear-gradient(180deg, rgba(18, 21, 19, 0.42), rgba(18, 21, 19, 0.06) 42%, rgba(18, 21, 19, 0.6) 100%),
+    radial-gradient(90% 70% at 22% 78%, rgba(18, 21, 19, 0.44), transparent 60%);
 }
 
 .hero__inner {
@@ -933,7 +935,7 @@
 }
 
 .step {
-  background: var(--c-black);
+  background: var(--c-panel);
   padding: 1.9rem 1.5rem 2.1rem;
   display: flex;
   flex-direction: column;
@@ -1078,4 +1080,16 @@
   letter-spacing: 0.01em;
   color: var(--c-text);
   text-shadow: 0 0 44px rgba(92, 233, 228, 0.14);
+}
+
+/* Tie the hero footage into the page ground instead of ending on a seam */
+.hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20vh;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--c-bg));
 }

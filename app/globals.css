@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------ */
+/*  Ground                                                             */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --nav-h: 5.5rem;
+  color-scheme: dark;
+}
+
+html {
+  background: theme("colors.ink");
+  scrollbar-width: thin;
+  scrollbar-color: theme("colors.smoke") theme("colors.ink");
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+body {
+  @apply bg-ink font-body text-bone antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: theme("colors.champagne.DEFAULT");
+  color: theme("colors.ink");
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: theme("colors.ink");
+}
+::-webkit-scrollbar-thumb {
+  background: theme("colors.smoke");
+  border-radius: 5px;
+}
+
+:focus-visible {
+  outline: 1px solid theme("colors.champagne.DEFAULT");
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Type voices                                                        */
+/* ------------------------------------------------------------------ */
+
+/* Display headlines: Archivo Variable pushed wide + heavy = the
+   "machined nameplate" voice. Weight/width ride the variable axes. */
+.display {
+  font-family: theme("fontFamily.display");
+  font-variation-settings: "wght" 780, "wdth" 120;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.94;
+}
+
+/* Technical micro-labels: Space Grotesk, tracked out, small caps feel. */
+.micro {
+  font-family: theme("fontFamily.tech");
+  font-variation-settings: "wght" 500;
+  font-size: 0.6875rem;
+  letter-spacing: theme("letterSpacing.micro");
+  text-transform: uppercase;
+}
+
+/* Body prose: Inter light, ~70% white, short measures. */
+.prose-block {
+  font-variation-settings: "wght" 330;
+  font-size: clamp(1rem, 0.55vw + 0.85rem, 1.1875rem);
+  line-height: 1.65;
+  color: rgb(242 239 233 / 0.72);
+  max-width: 34rem;
+}
+
+/* ------------------------------------------------------------------ */
+/*  RevealHeadline — outline stroke that solidifies into fill.         */
+/*  Default (no JS / reduced motion): fully filled and visible.        */
+/*  SmoothScroll adds .fx to <html> only when motion is allowed;       */
+/*  the hidden initial states live behind that gate so the page        */
+/*  never renders blank without JS.                                    */
+/* ------------------------------------------------------------------ */
+
+.rh-line {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding-block: 0.04em; /* keep ascenders/descenders unclipped */
+}
+
+.rh-stroke,
+.rh-fill {
+  display: block;
+}
+
+/* Ghost copy: thin champagne strokes, no fill. */
+.rh-stroke {
+  position: absolute;
+  inset: 0;
+  padding-block: 0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(201 166 122 / 0.55);
+  pointer-events: none;
+}
+
+.fx .rh-stroke {
+  opacity: 0;
+}
+.fx .rh-clip {
+  /* GSAP animates clip-path from full-hide to full-show; the -6%
+     bleed keeps italic overhangs and glyph tails inside the window. */
+  clip-path: inset(-6% -6% -6% -6%);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Chapter background stage                                           */
+/* ------------------------------------------------------------------ */
+
+/* Every chapter's sticky viewport dissolves into ink at both seams so
+   consecutive chapters crossfade with zero orchestration cost. */
+.chapter-bg::before,
+.chapter-bg::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.chapter-bg::before {
+  top: 0;
+  height: 22vh;
+  background: linear-gradient(to bottom, theme("colors.ink"), transparent);
+}
+.chapter-bg::after {
+  bottom: 0;
+  height: 26vh;
+  background: linear-gradient(to top, theme("colors.ink"), transparent);
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  will-change: opacity, transform;
+}
+
+/* Soft vignette keeps edges quiet under type. */
+.scene-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 42%, transparent 42%, rgb(10 11 12 / 0.78) 100%),
+    linear-gradient(rgb(10 11 12 / 0.22), rgb(10 11 12 / 0.22));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Film grain — pure CSS, additive, motionless for reduced-motion.    */
+/* ------------------------------------------------------------------ */
+
+.grain {
+  position: fixed;
+  inset: -100px;
+  z-index: 55;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .grain {
+    animation: grain-shift 1.4s steps(4) infinite;
+  }
+}
+
+@keyframes grain-shift {
+  0% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-38px, 22px, 0); }
+  50% { transform: translate3d(24px, -30px, 0); }
+  75% { transform: translate3d(-16px, -18px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Circular CTA                                                       */
+/* ------------------------------------------------------------------ */
+
+.cta-ring-spin {
+  transform-origin: 50% 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cta-ring-spin {
+    animation: slow-spin 24s linear infinite;
+  }
+}
+@keyframes slow-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Scroll cue                                                         */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .cue-line::after {
+    animation: cue-drop 2.4s cubic-bezier(0.19, 1, 0.22, 1) infinite;
+  }
+}
+.cue-line {
+  position: relative;
+  width: 1px;
+  height: 3.5rem;
+  overflow: hidden;
+  background: rgb(242 239 233 / 0.14);
+}
+.cue-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, theme("colors.champagne.DEFAULT"));
+}
+@keyframes cue-drop {
+  0% { transform: translateY(0); }
+  60%, 100% { transform: translateY(200%); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hairlines & panels                                                 */
+/* ------------------------------------------------------------------ */
+
+.hairline {
+  border-color: rgb(46 51 59 / 0.6);
+}
+
+.panel {
+  background: linear-gradient(165deg, rgb(24 27 32 / 0.55), rgb(16 18 21 / 0.35));
+  border: 1px solid rgb(46 51 59 / 0.55);
+  backdrop-filter: blur(8px);
+}

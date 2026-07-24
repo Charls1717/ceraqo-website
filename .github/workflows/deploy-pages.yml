@@ -5,15 +5,16 @@ name: deploy-pages
 # Pages is enabled for the repository (Settings -> Pages -> GitHub Actions).
 #
 # base_path: leave empty for a custom domain / root deployment; use
-# "/ceraqo-website/" for the default project-pages URL.
+# "/ceraqo-website" for the default project-pages URL (no trailing slash —
+# Next.js basePath convention).
 
 on:
   workflow_dispatch:
     inputs:
       base_path:
-        description: 'Vite base path (e.g. /ceraqo-website/ for project pages)'
+        description: 'Next.js basePath (e.g. /ceraqo-website for project pages)'
         required: false
-        default: '/ceraqo-website/'
+        default: '/ceraqo-website'
 
 permissions:
   contents: read
@@ -37,10 +38,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx vite build --base "${{ inputs.base_path || '/' }}"
+      - run: npm run build
+        env:
+          NEXT_BASE_PATH: ${{ inputs.base_path }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: out
 
   deploy:
     needs: build

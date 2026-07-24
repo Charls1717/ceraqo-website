@@ -22,9 +22,9 @@ on:
         required: false
         default: 'false'
       base_path:
-        description: 'Vite base path for the Pages build'
+        description: 'Next.js basePath for the Pages build (no trailing slash)'
         required: false
-        default: '/ceraqo-website/'
+        default: '/ceraqo-website'
 
 permissions:
   contents: write
@@ -57,10 +57,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx vite build --base "${{ inputs.base_path || '/' }}"
+      - run: npm run build
+        env:
+          NEXT_BASE_PATH: ${{ inputs.base_path }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: out
       - id: deployment
         uses: actions/deploy-pages@v4
 

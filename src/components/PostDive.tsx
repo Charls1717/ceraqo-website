@@ -125,33 +125,33 @@ const COMPARE_ROWS: { label: string; q: string; pro: string }[] = [
 const FAQ: { q: string; a: string }[] = [
   {
     q: 'What exactly is Q-ARMOR?',
-    a: 'A newly developed silane chemistry — not a reformulated wax, and not another ceramic coating. It bonds covalently with your paint, becoming part of the surface rather than a layer resting on it.',
+    a: 'A newly developed silane chemistry — not a wax, not another ceramic coating. It bonds with your paint and outperforms premium ceramic coatings in hardness and durability.',
   },
   {
     q: 'Can I really apply it myself?',
-    a: 'Yes. Prepare the surface, wipe on, buff, and let it cure at ambient temperature — about an hour in your driveway. No installer, no equipment.',
+    a: 'Yes. Wipe on, buff, let it cure — about an hour in your driveway. No installer, no equipment, no experience.',
   },
   {
     q: 'How long does the protection last?',
-    a: 'Under suitable conditions, Q-ARMOR is designed to protect for up to 72 months. Longevity depends on surface preparation, application quality, environment, vehicle usage and washing routine.',
+    a: 'Up to 72 months, depending on preparation, environment and washing routine.',
   },
   {
     q: 'How hard is the cured layer?',
-    a: 'Up to 9H pencil hardness — engineered to outperform today’s premium ceramic coatings in hardness and durability.',
+    a: 'Up to 9H pencil hardness — engineered to outperform today’s premium ceramic coatings.',
   },
   {
     q: 'How far does one kit go?',
-    a: '35–50 ml protects an entire car, and one kit protects up to two large vehicles, depending on vehicle size and application method.',
+    a: '35–50 ml protects an entire car. One kit covers up to two large vehicles.',
   },
   {
     q: 'How does the batch model work?',
-    a: 'Q-ARMOR is produced in numbered batches of 20,000 bottles, with a new batch every two months. When a batch sells out, pre-orders open for the next one — a production schedule, not artificial scarcity.',
+    a: '20,000 numbered bottles per batch. A new batch every two months. When one sells out, pre-orders open for the next — a production schedule, not artificial scarcity.',
   },
   {
     q: 'When am I charged?',
     a: PREORDER_URL
-      ? 'Payment is taken securely at checkout when you place your pre-order. Your order secures your spot in Batch 001.'
-      : 'Payment is taken at checkout once pre-orders open. Until then, your email secures your place in line for Batch 001.',
+      ? 'At checkout, the moment you place your pre-order. Your order secures your spot in Batch 001.'
+      : 'At checkout, once pre-orders open. Until then, your email holds your place in Batch 001.',
   },
 ];
 
@@ -279,10 +279,9 @@ export default function PostDive() {
               A new category of surface protection.
             </h2>
             <p className="prose reveal">
-              Q-ARMOR is not a reformulated wax, and it is not another ceramic coating. It is
-              a newly developed silane chemistry that bonds covalently with your paint —
-              engineered to outperform today’s premium ceramic coatings in hardness and
-              durability.
+              Not a reformulated wax. Not another ceramic coating. Q-ARMOR is a newly
+              developed silane chemistry that becomes part of your paint — engineered to
+              outperform premium ceramic coatings in hardness and durability.
             </p>
             <p className="prose prose--turn reveal">
               Applied by you, in your driveway. No installer. No equipment. €169.
@@ -296,7 +295,6 @@ export default function PostDive() {
               <i />
               <i />
             </span>
-            <figcaption className="micro">Surface dive — zone 03 / spread</figcaption>
           </figure>
         </div>
       </section>
@@ -310,8 +308,7 @@ export default function PostDive() {
           Why Q-Armor?
         </h2>
         <p className="prose reveal">
-          Because your vehicle deserves more than temporary protection. Every drive exposes
-          your paint to invisible damage.
+          Every drive attacks your paint. Invisibly. Constantly.
         </p>
         <ul className="tgrid stagger">
           {THREATS.map((t, i) => (
@@ -322,9 +319,7 @@ export default function PostDive() {
             </li>
           ))}
           <li className="tcard tcard--turn sitem">
-            <span className="tcard__turn">
-              Q-ARMOR is engineered to help preserve what matters.
-            </span>
+            <span className="tcard__turn">One coating against all of it.</span>
           </li>
         </ul>
       </section>
@@ -373,9 +368,8 @@ export default function PostDive() {
             </span>
             <h3 className="duo__title">Deep Gloss. Crystal Clear Finish.</h3>
             <p className="prose">
-              Unlike products that leave heavy residues or artificial shine, Q-ARMOR enhances
-              the natural depth of your vehicle’s finish. The result is a rich, reflective
-              gloss that looks clean, sharp and refined.
+              No heavy residues. No artificial shine. Just deeper, sharper, more reflective
+              gloss.
             </p>
           </div>
           <div className="duo__cell duo__cell--card reveal">
@@ -383,10 +377,7 @@ export default function PostDive() {
               <IconClean />
             </span>
             <h3 className="duo__title">Easy Maintenance. Less Cleaning. More Driving.</h3>
-            <p className="prose">
-              Its advanced surface characteristics help reduce the adhesion of water, dirt,
-              oils and everyday contamination.
-            </p>
+            <p className="prose">Water, dirt and oil struggle to stick.</p>
             <ul className="checklist">
               {MAINTENANCE.map((m) => (
                 <li key={m} className="checklist__item">
@@ -468,8 +459,7 @@ export default function PostDive() {
           Professional Results. Made for Everyone.
         </h2>
         <p className="prose reveal">
-          Advanced vehicle protection should not be limited to professional detailers.
-          Q-ARMOR has been developed for enthusiasts and everyday drivers alike.
+          Four steps. About an hour. No experience needed.
         </p>
         <ol className="steps">
           {STEPS.map((s, i) => (
@@ -492,9 +482,7 @@ export default function PostDive() {
         <h2 id="kit-title" className="section__title reveal">
           One Kit. Everything Included.
         </h2>
-        <p className="prose reveal">
-          Each Q-ARMOR kit contains everything required for professional-quality application.
-        </p>
+        <p className="prose reveal">Everything required. Nothing extra.</p>
         <ul className="kit">
           {KIT.map((k, i) => (
             <li key={k} className="kit__item reveal">
@@ -504,8 +492,7 @@ export default function PostDive() {
           ))}
         </ul>
         <p className="prose prose--dim reveal">
-          One kit protects up to two large vehicles, depending on vehicle size and
-          application method.
+          One kit protects up to two large vehicles.
         </p>
       </section>
 
@@ -535,9 +522,9 @@ export default function PostDive() {
           The Science Behind Q-Armor
         </h2>
         <p className="prose reveal">
-          Q-ARMOR’s silane chemistry forms a covalent bond with the surface — the coating
-          becomes part of the paint rather than a layer resting on it. It stays completely
-          transparent, deepening gloss and clarity while it protects.
+          Q-ARMOR doesn’t rest on your paint — it bonds with it. Covalently. It cannot
+          flake off or be washed off. And it stays perfectly transparent: nothing but
+          depth, gloss and protection.
         </p>
       </section>
 
@@ -567,8 +554,7 @@ export default function PostDive() {
           <p className="lines__line reveal">Confidence every time you park and look back.</p>
         </div>
         <p className="prose prose--turn reveal">
-          Because protecting your vehicle isn’t just about preserving paint. It’s about
-          preserving the pride of ownership.
+          Because it’s never just about paint. It’s about pride of ownership.
         </p>
       </section>
 
@@ -649,9 +635,9 @@ export default function PostDive() {
         </p>
         <div className="batchbox reveal">
           <p>
-            Q-ARMOR is produced in numbered batches of 20,000 bottles, with a new batch every
-            two months. When a batch sells out, pre-orders open for the next one — a
-            production schedule, not artificial scarcity.
+            Numbered batches of 20,000 bottles. A new batch every two months. When one
+            sells out, pre-orders open for the next — a production schedule, not
+            artificial scarcity.
           </p>
         </div>
       </section>

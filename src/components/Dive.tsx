@@ -360,8 +360,7 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
           <div className="overlay__brand wordmark">
             CERAQO<sup className="hero__tm">™</sup> <span>/</span> Q-ARMOR
           </div>
-          <div className="overlay__kicker">Advanced Surface Protection</div>
-          <h1 className="overlay__title">The Future of Vehicle Protection Starts Here.</h1>
+          <h1 className="overlay__title">The Future of Vehicle Protection.</h1>
         </div>
         <div ref={hintRef} className="overlay overlay--hint" style={{ opacity: 1 }}>
           <span className="micro">Scroll to descend</span>
@@ -396,7 +395,6 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
             <div className="hud__brand wordmark">
               CERAQO <span style={{ color: 'var(--c-cyan)' }}>/</span> Q-ARMOR
             </div>
-            <div className="hud__sub">Surface dive — unbroken shot</div>
           </div>
 
           <div className="hud__corner hud__corner--bl">

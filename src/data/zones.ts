@@ -21,7 +21,7 @@ export const ZONES: Zone[] = [
     id: 'object',
     label: 'OBJECT',
     kicker: 'The object',
-    fact: 'A clear, colourless liquid based on silanes.',
+    fact: 'The molecule that changes everything.',
   },
   {
     id: 'drop',

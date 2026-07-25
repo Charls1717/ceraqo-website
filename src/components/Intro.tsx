@@ -26,15 +26,14 @@ export default function Intro() {
   return (
     <section ref={rootRef} className="intro section" aria-label="Introduction">
       <p className="intro__lead reveal">
-        For decades, protecting a vehicle has meant making compromises.
+        Protection has always meant compromise.
       </p>
       <div className="intro__pair">
         <p className="intro__big reveal">Waxes fade.</p>
         <p className="intro__big reveal">Sealants wear away.</p>
       </div>
       <p className="intro__body reveal">
-        Professional coatings often require specialist skills, expensive equipment and
-        complicated application procedures.
+        Professional coatings demand installers, equipment and booked shop time.
       </p>
       <p className="intro__turn reveal">Q-ARMOR changes everything.</p>
       <p className="intro__no reveal">

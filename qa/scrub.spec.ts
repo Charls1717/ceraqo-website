@@ -365,7 +365,7 @@ test('the dive reacts from the very first scroll pixel', async ({ page }) => {
   expect(trackTop, 'the scrub track owns scroll position 0').toBe(0);
   await expect(page.locator('.overlay--hero')).toBeVisible();
   await expect(page.locator('.overlay__title')).toHaveText(
-    'The Future of Vehicle Protection Starts Here.',
+    'The Future of Vehicle Protection.',
   );
   const before = await canvasPixels(page);
   await page.evaluate(() => window.scrollTo(0, 400));
@@ -435,22 +435,25 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
   await page.waitForSelector('.loader[data-done="true"]', { state: 'attached', timeout: 120_000 });
   const body = (await page.evaluate(() => document.body.textContent ?? '')).replace(/\s+/g, ' ');
   const mustContain = [
-    'Advanced Surface Protection',
-    'The Future of Vehicle Protection Starts Here.',
-    'For decades, protecting a vehicle has meant making compromises.',
+    'Advanced Surface Protection', // footer (removed from the hero)
+    'The Future of Vehicle Protection.',
+    'Protection has always meant compromise.',
     'Waxes fade.',
     'Sealants wear away.',
+    'Professional coatings demand installers, equipment and booked shop time.',
     'Q-ARMOR changes everything.',
     'No professional installer. No complicated process. No compromise.',
-    'A clear, colourless liquid based on silanes.',
+    'The molecule that changes everything.',
     'Why Q-Armor?',
     'A new category of surface protection.',
-    'not a reformulated wax, and it is not another ceramic coating',
+    'Not a reformulated wax. Not another ceramic coating.',
     'Applied by you, in your driveway. No installer. No equipment. €169.',
+    'Every drive attacks your paint. Invisibly. Constantly.',
+    'One coating against all of it.',
     'Professional-grade results. A fraction of the price.',
     '€700–€2,500+',
     'Batch 001',
-    '20,000 bottles, with a new batch every two months',
+    'Numbered batches of 20,000 bottles. A new batch every two months.',
     'a production schedule, not artificial scarcity',
     'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.',
     'Before You Pre-order',
@@ -458,20 +461,25 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Privacy notice',
     'Not a wax. Not another ceramic coating. A new category.',
     'Pre-order — €169',
-    'becomes part of the paint rather than a layer resting on it',
+    'Q-ARMOR doesn’t rest on your paint — it bonds with it. Covalently.',
     'Professional Results. Made for Everyone.',
+    'Four steps. About an hour. No experience needed.',
     'That’s all. Professional-grade protection has never been this accessible.',
     'Up to 72 Months Protection*',
     'Simple DIY Application',
     'Deep Gloss. Crystal Clear Finish.',
+    'No heavy residues. No artificial shine.',
     'Easy Maintenance. Less Cleaning. More Driving.',
+    'Water, dirt and oil struggle to stick.',
     'Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72 months.*',
     'One Kit. Everything Included.',
-    'One kit protects up to two large vehicles, depending on vehicle size and application method.',
+    'Everything required. Nothing extra.',
+    'One kit protects up to two large vehicles.',
     'Suitable For',
     'The Science Behind Q-Armor',
     'Designed Around One Philosophy',
     'Confidence every time you park and look back.',
+    'Because it’s never just about paint. It’s about pride of ownership.',
     'Welcome to the Future of Surface Protection.',
     'Welcome to CERAQO™.',
     'One bottle. One car.',
@@ -479,6 +487,7 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
   const missing = mustContain.filter((t) => !body.includes(t.replace(/\s+/g, ' ')));
   expect(missing, `missing verbatim lines: ${JSON.stringify(missing, null, 2)}`).toEqual([]);
   for (const fact of [
+    'The molecule that changes everything.',
     '35–50 ml protects an entire car.',
     'Wipe on. Buff. Cures at ambient temperature.',
     'A covalent bond with the paint. It cannot flake off or be washed off.',

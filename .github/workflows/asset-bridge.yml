@@ -25,6 +25,10 @@ on:
         description: 'Vite base path for the Pages build'
         required: false
         default: '/ceraqo-website/'
+      preview_ref:
+        description: 'Optional ref to build as a staging copy under <base>/preview/ (the site root still builds from the dispatched ref)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -58,6 +62,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx vite build --base "${{ inputs.base_path || '/' }}"
+      - name: Build staging preview
+        if: ${{ inputs.preview_ref != '' }}
+        run: |
+          git fetch --depth 1 origin "${{ inputs.preview_ref }}"
+          git worktree add /tmp/preview-src FETCH_HEAD
+          cd /tmp/preview-src
+          npm ci
+          npx vite build --base "${{ inputs.base_path || '/' }}preview/"
+          mkdir -p "$GITHUB_WORKSPACE/dist/preview"
+          cp -r dist/. "$GITHUB_WORKSPACE/dist/preview/"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

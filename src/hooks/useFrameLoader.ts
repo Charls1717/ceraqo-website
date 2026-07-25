@@ -44,9 +44,11 @@ declare global {
 
 /**
  * Streams the frame sequence for the given profile through the decode
- * worker (see lib/frameStore). The loader blocks only until the OBJECT
- * zone is fetched and the opening bitmaps are decoded; everything else
- * streams in scroll order while the visitor is still at the top.
+ * worker (see lib/frameStore). The loader blocks until the entire tier
+ * is fetched and the opening bitmap is decoded; decode itself stays
+ * windowed off-thread (485 resident 1080p+ bitmaps would be ~4 GB, so
+ * "decode everything up front" is bounded to the sliding window that
+ * the worker keeps saturated from local bytes).
  */
 export function useFrameStore(profile: FrameProfile, enabled: boolean) {
   const [progress, setProgress] = useState(0);
@@ -67,8 +69,10 @@ export function useFrameStore(profile: FrameProfile, enabled: boolean) {
     storeRef.current = store;
     window.__frameLoadState = { loaded: 0, total: info.count };
 
-    const firstZoneEnd = FRAME_MANIFEST.zones[0]?.end ?? info.count - 1;
-    const blockUntil = Math.min(info.count, firstZoneEnd + 33);
+    // Full preload: scroll interaction only unlocks once every frame of
+    // the active tier is on the machine (and the opening frame is
+    // decoded), so the scrub can never wait on the network mid-gesture.
+    const blockUntil = info.count;
     let readyFired = false;
 
     store.onProgress = (loaded, total) => {

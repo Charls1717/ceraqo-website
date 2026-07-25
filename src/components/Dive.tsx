@@ -48,6 +48,7 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
   const hudRef = useRef<HTMLDivElement>(null);
   const magRef = useRef<HTMLDivElement>(null);
   const depthRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
   const zoneItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const overlayRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -261,9 +262,11 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
         lastZone = zi;
       }
 
-      // Scroll hint: hold at the very top of the dive, gone by ~4.5%
-      const hintOpacity = 1 - p / 0.045;
-      setOverlay(hintRef.current, hintOpacity, 0);
+      // Hero copy rides the opening frame: hold at the top, gone by
+      // ~4.5% progress so the descent takes over immediately.
+      const heroOpacity = 1 - p / 0.045;
+      setOverlay(heroRef.current, heroOpacity, -p * 300);
+      setOverlay(hintRef.current, heroOpacity, 0);
 
       // Zone facts: fade in after the zone starts, out before it ends.
       // Windows are tuned per zone so copy always sits over a settled,
@@ -319,6 +322,14 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
           <i />
         </div>
 
+        {/* Hero copy over frame 0 — the page opens inside the scrub */}
+        <div ref={heroRef} className="overlay overlay--hero" style={{ opacity: 1 }}>
+          <div className="overlay__brand wordmark">
+            CERAQO<sup className="hero__tm">™</sup> <span>/</span> Q-ARMOR
+          </div>
+          <div className="overlay__kicker">Advanced Surface Protection</div>
+          <h1 className="overlay__title">The Future of Vehicle Protection Starts Here.</h1>
+        </div>
         <div ref={hintRef} className="overlay overlay--hint" style={{ opacity: 1 }}>
           <span className="micro">Scroll to descend</span>
           <span className="overlay__hint-line" />

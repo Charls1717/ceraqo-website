@@ -299,6 +299,33 @@ test('post-dive: specs, launch line and waitlist render', async ({ page }) => {
   await page.screenshot({ path: 'qa/post-sections.png', fullPage: false });
 });
 
+test('the dive reacts from the very first scroll pixel', async ({ page }) => {
+  await waitForStart(page);
+  const trackTop = await page.evaluate(() => {
+    const t = document.querySelector<HTMLElement>('.dive-track')!;
+    return Math.round(t.getBoundingClientRect().top + window.scrollY);
+  });
+  expect(trackTop, 'the scrub track owns scroll position 0').toBe(0);
+  await expect(page.locator('.overlay--hero')).toBeVisible();
+  await expect(page.locator('.overlay__title')).toHaveText(
+    'The Future of Vehicle Protection Starts Here.',
+  );
+  const before = await canvasPixels(page);
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await page.waitForTimeout(800);
+  const after = await canvasPixels(page);
+  expect(
+    meanAbsDiff(before.data, after.data),
+    'frames advance within the first 400px of scroll',
+  ).toBeGreaterThan(0.8);
+  const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
+  expect(mag, 'the HUD is already counting').not.toBe('1.0×');
+  const op = await page
+    .locator('.overlay--hero')
+    .evaluate((el) => Number(getComputedStyle(el).opacity));
+  expect(op, 'the hero copy is already yielding to the descent').toBeLessThan(0.6);
+});
+
 test('loader: percentage is bound to the dismissal condition', async ({ page }) => {
   await page.addInitScript(() => {
     const watch = () => {

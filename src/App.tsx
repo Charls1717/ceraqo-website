@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import Hero from './components/Hero';
 import Intro from './components/Intro';
 import Dive from './components/Dive';
 import Preloader from './components/Preloader';
@@ -61,16 +60,15 @@ export default function App() {
       const lenis = (window as unknown as { __lenis?: Lenis }).__lenis;
       lenis?.start();
       ScrollTrigger.refresh();
-    }, 12000);
+    }, 30000);
     return () => window.clearTimeout(t);
   }, [started]);
 
   return (
     <>
       <Preloader progress={progress} done={started} />
-      <Hero on={started} />
-      <Intro />
       <Dive storeRef={storeRef} profile={profile} active={started} />
+      <Intro />
       <PostDive />
       {diag && <Diag profile={profile} progress={progress} ready={ready} started={started} />}
     </>

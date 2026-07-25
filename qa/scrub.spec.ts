@@ -26,15 +26,17 @@ declare global {
 }
 
 /**
- * Expected HUD readouts at the five proof stops (log scale 1 -> 1e6).
- * The endpoints are clamped and asserted exactly; the mid stops get a
- * tolerance because a single scroll pixel shifts 10^(6p) measurably.
+ * Expected HUD readouts at the five proof stops. Magnification is
+ * zone-anchored (src/data/zones.ts): log-linear between the anchors
+ * [1, 2, 20, 400, 5e4, 1e6] inside each fifth of the dive. Endpoints
+ * are clamped and asserted exactly; mid stops get a tolerance for
+ * sub-pixel scroll placement.
  */
 const STOPS: { p: number; mag: number; exact?: string }[] = [
   { p: 0.0, mag: 1, exact: '1.0×' },
-  { p: 0.25, mag: 31.6 },
-  { p: 0.5, mag: 1_000 },
-  { p: 0.75, mag: 31_623 },
+  { p: 0.25, mag: 3.56 },
+  { p: 0.5, mag: 89.4 },
+  { p: 0.75, mag: 14_950 },
   { p: 1.0, mag: 1_000_000, exact: '1,000,000×' },
 ];
 
@@ -230,7 +232,7 @@ test.describe('mobile', () => {
 
     await scrubTo(page, 0.5);
     const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
-    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(500);
+    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(60);
     await page.screenshot({ path: 'qa/mobile-050.png' });
   });
 });
@@ -244,9 +246,10 @@ test('hud rail: clicking a zone glides the dive to that zone', async ({ page }) 
 
   const active = (await page.locator('.hud__zone[data-active="true"]').textContent())?.trim();
   expect(active).toContain('BOND');
-  // Zone 4 entry (frame 303 of 484) sits at 10^3.76 ≈ 5,700x
+  // Zone 4 entry (frame 303 of 484) sits near ×750 on the
+  // zone-anchored curve (bond runs 400 -> 50,000)
   const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
-  expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(4_000);
+  expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(450);
 });
 
 test.describe('high-DPI', () => {
@@ -274,7 +277,7 @@ test.describe('high-DPI', () => {
 
     await scrubTo(page, 0.25);
     const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
-    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(20);
+    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(3);
   });
 });
 
@@ -291,7 +294,7 @@ test.describe('reduced motion', () => {
     await expect(page.locator('.dive-track')).toHaveCount(1);
     await scrubTo(page, 0.5);
     const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
-    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(500);
+    expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(60);
   });
 });
 
@@ -403,7 +406,11 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Batch 001',
     '20,000 bottles, with a new batch every two months',
     'a production schedule, not artificial scarcity',
-    'No payment today. Your email reserves a bottle in Batch 001.',
+    'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.',
+    'Before You Pre-order',
+    'When am I charged?',
+    'Privacy notice',
+    'Not a wax. Not another ceramic coating. A new category.',
     'Pre-order — €169',
     'becomes part of the paint rather than a layer resting on it',
     'Professional Results. Made for Everyone.',
@@ -464,3 +471,87 @@ test('waitlist mechanics still work', async ({ page }) => {
   await page.locator('.waitlist__btn').click();
   await expect(page.locator('.waitlist__ok')).toContainText('You’re on the list for Batch 001.');
 });
+
+test('faq: every question opens and answers carry no new claims markers', async ({ page }) => {
+  await waitForStart(page);
+  await page.locator('#s-faq').scrollIntoViewIfNeeded();
+  const items = page.locator('.faq__item');
+  await expect(items).toHaveCount(7);
+  const n = await items.count();
+  for (let i = 0; i < n; i++) {
+    const item = items.nth(i);
+    await item.locator('.faq__q').click();
+    await expect(item).toHaveAttribute('open', '');
+    await expect(item.locator('.faq__a')).toBeVisible();
+  }
+});
+
+test('privacy: form links to the notice and the notice exists', async ({ page }) => {
+  await waitForStart(page);
+  await page.locator('.waitlist__legal-link').scrollIntoViewIfNeeded();
+  await expect(page.locator('.waitlist__legal-link')).toHaveAttribute('href', '#privacy');
+  await expect(page.locator('#privacy .legal__text')).toContainText('never sold or shared');
+  await expect(page.locator('.footer__link')).toHaveAttribute('href', '#privacy');
+});
+
+/**
+ * Item-10 audit: real phone widths. Each width is its own test so a
+ * failure names the viewport, and each gets a fresh full load.
+ */
+for (const width of [375, 390, 430]) {
+  test.describe(`mobile layout ${width}px`, () => {
+    test.use({ viewport: { width, height: 844 }, isMobile: true, hasTouch: true });
+
+    test(`no overflow, gauges fit, CTA clear of the form at ${width}px`, async ({ page }) => {
+      await waitForStart(page);
+
+      // No horizontal scroll anywhere on the page
+      const overflow = await page.evaluate(() => {
+        const el = document.scrollingElement!;
+        return el.scrollWidth - el.clientWidth;
+      });
+      expect(overflow, 'page must not scroll horizontally').toBeLessThanOrEqual(1);
+
+      // Gauge unit text stays inside its card (the old "PENCIL SCALE"
+      // overflow regression)
+      await page.locator('.specs2__data').scrollIntoViewIfNeeded();
+      await page.waitForTimeout(600);
+      const gaugeFits = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('.scard--gauge')).every((card) => {
+          const unit = card.querySelector('.gauge__unit')!;
+          return unit.getBoundingClientRect().width <= card.getBoundingClientRect().width + 1;
+        });
+      });
+      expect(gaugeFits, 'gauge unit text fits its card').toBe(true);
+
+      // Floating CTA must not cover the pre-order form controls
+      await page.locator('.waitlist__form').scrollIntoViewIfNeeded();
+      await page.waitForTimeout(600);
+      const clear = await page.evaluate(() => {
+        const cta = document.querySelector('.cta__btn')!.getBoundingClientRect();
+        const overlaps = (r: DOMRect) =>
+          cta.left < r.right && cta.right > r.left && cta.top < r.bottom && cta.bottom > r.top;
+        const form = document.querySelector('.waitlist__form')!.getBoundingClientRect();
+        const legal = document.querySelector('.waitlist__legal')!.getBoundingClientRect();
+        return !overlaps(form) && !overlaps(legal);
+      });
+      expect(clear, 'floating CTA does not cover the form or its legal line').toBe(true);
+
+      // The dot rail replaces the labelled pagenav below 1080px
+      await page.locator('#s-specs').scrollIntoViewIfNeeded();
+      await page.waitForTimeout(900);
+      await expect(page.locator('.pagenav')).toHaveAttribute('data-on', 'true');
+      const dots = await page.evaluate(() => {
+        const label = document.querySelector('.pagenav__label')!;
+        const item = document.querySelector('.pagenav__item')!.getBoundingClientRect();
+        return { labelHidden: getComputedStyle(label).display === 'none', tap: item.width };
+      });
+      expect(dots.labelHidden, 'labels collapse to dots').toBe(true);
+      expect(dots.tap, 'tap target is at least 24px').toBeGreaterThanOrEqual(24);
+
+      await page.locator('#s-access').scrollIntoViewIfNeeded();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `qa/mobile-audit-${width}.png` });
+    });
+  });
+}

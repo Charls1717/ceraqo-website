@@ -7,8 +7,13 @@ import type { FrameStore } from '../lib/frameStore';
 
 gsap.registerPlugin(ScrollTrigger);
 
-/** Scroll distance dedicated to each frame of the sequence. */
-const PX_PER_FRAME = 22;
+/**
+ * Scroll distance dedicated to each frame of the sequence. 14px keeps
+ * the scrub dense enough to feel continuous while holding the whole
+ * dive to roughly 6.8k px — under half the page instead of the ~60%
+ * it consumed at 22px, so the product story arrives sooner.
+ */
+const PX_PER_FRAME = 14;
 
 /** Per-tick catch-up factor for the smoothed frame cursor. */
 const LERP = 0.24;

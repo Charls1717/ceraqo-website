@@ -86,7 +86,8 @@ export default function App() {
           { id: 's-apply', num: '05', label: 'Apply' },
           { id: 's-kit', num: '06', label: 'Kit' },
           { id: 's-science', num: '07', label: 'Science' },
-          { id: 's-access', num: '08', label: 'Pre-order' },
+          { id: 's-faq', num: '08', label: 'FAQ' },
+          { id: 's-access', num: '09', label: 'Pre-order' },
         ]}
       />
       <PreorderCta on={started} />

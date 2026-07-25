@@ -38,8 +38,11 @@ export default function PreorderCta({ on }: { on: boolean }) {
           Pre-order <span className="cta__price">€169</span>
         </button>
       )}
+      {/* Sublabel doubles as payment microcopy once checkout is live;
+          while the fallback form is active it must not promise a
+          charge that can't happen yet. */}
       <span className="cta__batch micro" aria-hidden="true">
-        Batch 001 · 20,000 bottles
+        {PREORDER_URL ? 'Batch 001 · charged at checkout' : 'Batch 001 · 20,000 bottles'}
       </span>
     </div>
   );

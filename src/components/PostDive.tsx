@@ -116,6 +116,45 @@ const COMPARE_ROWS: { label: string; q: string; pro: string }[] = [
   },
 ];
 
+/**
+ * Every answer is assembled from claims already on the page — the
+ * FAQ introduces no new product facts. The charge-timing answer
+ * follows the PREORDER_URL switch so it never promises a checkout
+ * that isn't live yet.
+ */
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: 'What exactly is Q-ARMOR?',
+    a: 'A newly developed silane chemistry — not a reformulated wax, and not another ceramic coating. It bonds covalently with your paint, becoming part of the surface rather than a layer resting on it.',
+  },
+  {
+    q: 'Can I really apply it myself?',
+    a: 'Yes. Prepare the surface, wipe on, buff, and let it cure at ambient temperature — about an hour in your driveway. No installer, no equipment.',
+  },
+  {
+    q: 'How long does the protection last?',
+    a: 'Under suitable conditions, Q-ARMOR is designed to protect for up to 72 months. Longevity depends on surface preparation, application quality, environment, vehicle usage and washing routine.',
+  },
+  {
+    q: 'How hard is the cured layer?',
+    a: 'Up to 9H pencil hardness — engineered to outperform today’s premium ceramic coatings in hardness and durability.',
+  },
+  {
+    q: 'How far does one kit go?',
+    a: '35–50 ml protects an entire car, and one kit protects up to two large vehicles, depending on vehicle size and application method.',
+  },
+  {
+    q: 'How does the batch model work?',
+    a: 'Q-ARMOR is produced in numbered batches of 20,000 bottles, with a new batch every two months. When a batch sells out, pre-orders open for the next one — a production schedule, not artificial scarcity.',
+  },
+  {
+    q: 'When am I charged?',
+    a: PREORDER_URL
+      ? 'Payment is taken securely at checkout when you place your pre-order. Your order secures your spot in Batch 001.'
+      : 'Payment is taken at checkout once pre-orders open. Until then, your email secures your place in line for Batch 001.',
+  },
+];
+
 /** Instrument-style arc meter, animated on reveal. */
 function Gauge({
   frac,
@@ -301,7 +340,7 @@ export default function PostDive() {
         <div className="specs2">
           <div className="specs2__data stagger">
             <Gauge frac={1} value="72" unit="months" label="Up to 72 Months Protection*" />
-            <Gauge frac={0.9} value="9H" unit="pencil scale" label="Up to 9H Pencil Hardness" />
+            <Gauge frac={1} value="9H" unit="hardness" label="Up to 9H Pencil Hardness" />
           </div>
           <div className="specs2__grid stagger">
             {SPEC_CARDS.map((s) => (
@@ -310,8 +349,8 @@ export default function PostDive() {
                 <h3 className="scard__label">{s.label}</h3>
               </article>
             ))}
-            <article className="scard scard--mark sitem" aria-hidden="true">
-              <span className="finder finder--media">
+            <article className="scard scard--mark sitem">
+              <span className="finder finder--media" aria-hidden="true">
                 <i />
                 <i />
                 <i />
@@ -320,6 +359,9 @@ export default function PostDive() {
               <span className="scard__wordmark wordmark">
                 CERAQO<span>™</span>
               </span>
+              <p className="scard__closing">
+                Not a wax. Not another ceramic coating. A new category.
+              </p>
             </article>
           </div>
         </div>
@@ -530,6 +572,24 @@ export default function PostDive() {
         </p>
       </section>
 
+      {/* 10 — questions, answered before the ask */}
+      <section id="s-faq" className="section section--rule section--dots" aria-labelledby="faq-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">10 / Questions</span>
+        </div>
+        <h2 id="faq-title" className="section__title reveal">
+          Before You Pre-order
+        </h2>
+        <div className="faq">
+          {FAQ.map((f) => (
+            <details key={f.q} className="faq__item reveal">
+              <summary className="faq__q">{f.q}</summary>
+              <p className="faq__a prose">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* Pre-order */}
       <section id="s-access" className="waitlist section" aria-labelledby="waitlist-title">
         <div className="waitlist__ghost" aria-hidden="true">
@@ -548,9 +608,14 @@ export default function PostDive() {
         {PREORDER_URL ? (
           // Live checkout mode — flips on automatically once the
           // Shopify URL is set in src/config.ts.
-          <a className="waitlist__btn waitlist__btn--link reveal" href={PREORDER_URL} target="_blank" rel="noopener">
-            Pre-order — €169
-          </a>
+          <>
+            <a className="waitlist__btn waitlist__btn--link reveal" href={PREORDER_URL} target="_blank" rel="noopener">
+              Pre-order — €169
+            </a>
+            <p className="waitlist__note reveal">
+              Payment is taken at checkout. Your order secures your spot in Batch 001.
+            </p>
+          </>
         ) : joined ? (
           <div className="waitlist__ok" role="status">
             You’re on the list for Batch 001. We’ll be in touch before it ships.
@@ -573,10 +638,15 @@ export default function PostDive() {
               </button>
             </form>
             <p className="waitlist__note reveal" role={error ? 'alert' : undefined}>
-              {error ?? 'No payment today. Your email reserves a bottle in Batch 001.'}
+              {error ??
+                'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.'}
             </p>
           </>
         )}
+        <p className="waitlist__legal reveal">
+          Your address is used only to contact you about Batch 001 — never shared, never
+          sold. <a className="waitlist__legal-link" href="#privacy">Privacy notice</a>
+        </p>
         <div className="batchbox reveal">
           <p>
             Q-ARMOR is produced in numbered batches of 20,000 bottles, with a new batch every
@@ -586,12 +656,25 @@ export default function PostDive() {
         </div>
       </section>
 
+      <div id="privacy" className="legal">
+        <h3 className="legal__title micro micro--cyan">Privacy notice</h3>
+        <p className="legal__text">
+          The email address you submit is used solely to contact you about Q-ARMOR
+          pre-orders and batch availability. It is never sold or shared with third
+          parties, and you can request its removal at any time. Full purchase terms are
+          presented at checkout when pre-orders open.
+        </p>
+      </div>
+
       <footer className="footer">
         <div className="footer__mark wordmark">
           CERAQO<sup className="hero__tm">™</sup> <span>/</span> Q-ARMOR
         </div>
         <div className="footer__meta">
           <span className="micro">Advanced Surface Protection</span>
+          <a className="micro footer__link" href="#privacy">
+            Privacy
+          </a>
           <span className="micro">© 2026 CERAQO</span>
         </div>
       </footer>

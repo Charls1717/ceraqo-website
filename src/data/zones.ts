@@ -49,12 +49,23 @@ export const ZONES: Zone[] = [
   },
 ];
 
-/** Magnification runs 1x -> 1,000,000x on a log scale across the dive. */
-export const MAG_EXPONENT_MAX = 6;
+/**
+ * Magnification is zone-anchored rather than one blind log sweep:
+ * each zone interpolates (log-linearly) between anchors chosen for
+ * what its footage plausibly shows — the bottle stays near 1×, the
+ * drop reaches tens, the spread hundreds, and only the molecular
+ * zones run into microscope territory. Zones are equal fifths of
+ * the frame range.
+ */
+const MAG_ANCHORS = [1, 2, 20, 400, 50_000, 1_000_000];
 
 export function magnificationAt(progress: number): number {
   const p = Math.min(1, Math.max(0, progress));
-  return Math.pow(10, p * MAG_EXPONENT_MAX);
+  const seg = Math.min(ZONES.length - 1, Math.floor(p * ZONES.length));
+  const local = p * ZONES.length - seg;
+  const a = Math.log10(MAG_ANCHORS[seg]);
+  const b = Math.log10(MAG_ANCHORS[seg + 1]);
+  return Math.pow(10, a + (b - a) * local);
 }
 
 export function formatMagnification(mag: number): string {

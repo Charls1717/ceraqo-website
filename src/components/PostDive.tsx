@@ -25,8 +25,6 @@ import {
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* The client's approved marketing copy — kept lines stay verbatim. */
-
 const THREATS: { label: string; icon: ReactNode }[] = [
   { label: 'Road salt', icon: <IconSalt /> },
   { label: 'UV radiation', icon: <IconUV /> },
@@ -94,6 +92,29 @@ const SUITABLE = [
 
 const STEPS = ['Prepare the surface', 'Apply', 'Buff', 'Allow the coating to cure'];
 
+const COMPARE_ROWS: { label: string; q: string; pro: string }[] = [
+  {
+    label: 'Application',
+    q: 'Self-applied — wipe on, buff, cures at ambient temperature',
+    pro: 'Trained installer, multi-stage preparation',
+  },
+  {
+    label: 'Hardness',
+    q: 'Up to 9H pencil hardness',
+    pro: 'Varies by product and tier',
+  },
+  {
+    label: 'Protection window',
+    q: 'Up to 72 months*',
+    pro: 'Commonly 2–5 years, tier dependent',
+  },
+  {
+    label: 'Time & place',
+    q: 'Your driveway, about an hour',
+    pro: 'Booked shop time, often over multiple days',
+  },
+];
+
 /** Instrument-style arc meter, animated on reveal. */
 function Gauge({
   frac,
@@ -150,7 +171,6 @@ export default function PostDive() {
           scrollTrigger: { trigger: el, start: 'top 86%' },
         });
       });
-      // Card grids come in staggered, item by item
       gsap.utils.toArray<HTMLElement>('.stagger').forEach((group) => {
         gsap.to(group.children, {
           opacity: 1,
@@ -161,7 +181,6 @@ export default function PostDive() {
           scrollTrigger: { trigger: group, start: 'top 84%' },
         });
       });
-      // Arc meters sweep and count on entry
       gsap.utils.toArray<SVGCircleElement>('.gauge__arc').forEach((arc) => {
         gsap.to(arc, {
           strokeDashoffset: Number(arc.dataset.offset ?? 0),
@@ -209,23 +228,24 @@ export default function PostDive() {
 
   return (
     <div ref={rootRef} className="post">
-      {/* 01 — More Than Protection: copy + a frame from the dive */}
+      {/* 01 — the category claim */}
       <section id="s-protection" className="section section--rule section--glow-a" aria-labelledby="mtp-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">01 / Surface engineering</span>
+          <span className="section__kicker micro micro--cyan">01 / A new category</span>
         </div>
         <div className="split">
           <div className="split__copy">
             <h2 id="mtp-title" className="section__title section__title--xl reveal">
-              More Than Protection. A New Generation of Surface Engineering.
+              A new category of surface protection.
             </h2>
             <p className="prose reveal">
-              Q-ARMOR is not designed to temporarily cover your vehicle. It is designed to
-              become part of it.
+              Q-ARMOR is not a reformulated wax, and it is not another ceramic coating. It is
+              a newly developed silane chemistry that bonds covalently with your paint —
+              engineered to outperform today’s premium ceramic coatings in hardness and
+              durability.
             </p>
             <p className="prose prose--turn reveal">
-              This is not another wax. This is not another sealant. This is the next evolution
-              of vehicle protection.
+              Applied by you, in your driveway. No installer. No equipment. €169.
             </p>
           </div>
           <figure className="split__media reveal">
@@ -241,7 +261,7 @@ export default function PostDive() {
         </div>
       </section>
 
-      {/* 02 — Why Q-Armor: the threats as an instrument grid */}
+      {/* 02 — the threats */}
       <section id="s-threats" className="section section--rule section--dots" aria-labelledby="why-title">
         <div className="section__kickrow reveal">
           <span className="section__kicker micro micro--cyan">02 / The threats</span>
@@ -269,7 +289,7 @@ export default function PostDive() {
         </ul>
       </section>
 
-      {/* 03 — Specifications: data gauges + icon cards + the legal footnote */}
+      {/* 03 — specifications */}
       <section id="s-specs" className="section section--rule section--glow-b" aria-labelledby="specs-title">
         <div className="section__kickrow reveal">
           <span className="section__kicker micro micro--cyan">03 / Specifications</span>
@@ -290,7 +310,7 @@ export default function PostDive() {
               </article>
             ))}
             <article className="scard scard--mark sitem" aria-hidden="true">
-              <span className="finder finder--media" >
+              <span className="finder finder--media">
                 <i />
                 <i />
                 <i />
@@ -351,10 +371,55 @@ export default function PostDive() {
         </div>
       </section>
 
-      {/* 04 — Professional Results */}
+      {/* 04 — price & performance */}
+      <section id="s-value" className="section section--rule section--glow-a" aria-labelledby="value-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">04 / Price &amp; performance</span>
+        </div>
+        <h2 id="value-title" className="section__title section__title--xl reveal">
+          Professional-grade results. A fraction of the price.
+        </h2>
+        <div className="compare stagger">
+          <article className="compare__col compare__col--q sitem">
+            <header className="compare__head">
+              <span className="micro micro--cyan">Q-ARMOR</span>
+              <strong className="compare__price">€169</strong>
+              <span className="micro compare__per">per kit — protects up to two large vehicles</span>
+            </header>
+            <dl className="compare__rows">
+              {COMPARE_ROWS.map((r) => (
+                <div key={r.label} className="compare__row">
+                  <dt className="micro">{r.label}</dt>
+                  <dd>{r.q}</dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+          <article className="compare__col sitem">
+            <header className="compare__head">
+              <span className="micro">Professional ceramic coating</span>
+              <strong className="compare__price compare__price--dim">€700–€2,500+</strong>
+              <span className="micro compare__per">per vehicle at premium detailing shops</span>
+            </header>
+            <dl className="compare__rows">
+              {COMPARE_ROWS.map((r) => (
+                <div key={r.label} className="compare__row">
+                  <dt className="micro">{r.label}</dt>
+                  <dd>{r.pro}</dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        </div>
+        <p className="compare__note micro reveal">
+          Professional pricing varies by market, vehicle size, preparation and coating tier.
+        </p>
+      </section>
+
+      {/* 05 — application */}
       <section id="s-apply" className="section section--rule" aria-labelledby="pro-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">04 / Application</span>
+          <span className="section__kicker micro micro--cyan">05 / Application</span>
         </div>
         <h2 id="pro-title" className="section__title reveal">
           Professional Results. Made for Everyone.
@@ -376,62 +441,10 @@ export default function PostDive() {
         </p>
       </section>
 
-      {/* 05 — Experience the Difference */}
-      <section id="s-difference" className="section section--rule" aria-labelledby="exp-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">05 / The difference</span>
-        </div>
-        <h2 id="exp-title" className="section__title reveal">
-          Experience the Difference
-        </h2>
-        <p className="prose reveal">From the very first application you’ll notice the transformation.</p>
-        <div className="lines">
-          <p className="lines__line reveal">A deeper gloss.</p>
-          <p className="lines__line reveal">A smoother finish.</p>
-          <p className="lines__line reveal">Water beads and releases effortlessly.</p>
-          <p className="lines__line reveal">Cleaning becomes easier.</p>
-          <p className="lines__line reveal">The surface stays looking cleaner for longer.</p>
-        </div>
-        <p className="prose prose--turn reveal">Your vehicle keeps the finish it deserves.</p>
-      </section>
-
-      {/* 06 — Engineered for Extreme Environments */}
-      <section id="s-environments" className="section section--rule" aria-labelledby="env-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">06 / Proven conditions</span>
-        </div>
-        <h2 id="env-title" className="section__title reveal">
-          Engineered for Extreme Environments
-        </h2>
-        <p className="prose reveal">
-          Originally developed for demanding applications across automotive, marine, aviation
-          and transport industries, Q-ARMOR is built to perform where ordinary protection
-          reaches its limits. Whether facing freezing winters, intense summer heat, coastal
-          environments or daily commuting, Q-ARMOR delivers reliable protection where it
-          matters most.
-        </p>
-      </section>
-
-      {/* 07 — Built to Last */}
-      <section id="s-built" className="section section--rule" aria-labelledby="btl-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">07 / Permanence</span>
-        </div>
-        <h2 id="btl-title" className="section__title reveal">
-          Built to Last
-        </h2>
-        <p className="prose reveal">
-          Unlike conventional waxes and temporary sealants, Q-ARMOR creates a durable bond
-          with compatible surfaces. It cannot simply be washed away during normal
-          maintenance. Instead, it becomes an integrated protective layer designed to perform
-          for years rather than weeks.
-        </p>
-      </section>
-
-      {/* 08 — Kit contents */}
+      {/* 06 — kit contents */}
       <section id="s-kit" className="section section--rule" aria-labelledby="kit-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">08 / In the box</span>
+          <span className="section__kicker micro micro--cyan">06 / In the box</span>
         </div>
         <h2 id="kit-title" className="section__title reveal">
           One Kit. Everything Included.
@@ -453,10 +466,10 @@ export default function PostDive() {
         </p>
       </section>
 
-      {/* 09 — Compatibility */}
+      {/* 07 — compatibility */}
       <section id="s-fit" className="section section--rule" aria-labelledby="fit-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">09 / Compatibility</span>
+          <span className="section__kicker micro micro--cyan">07 / Compatibility</span>
         </div>
         <h2 id="fit-title" className="section__title reveal">
           Suitable For
@@ -470,22 +483,18 @@ export default function PostDive() {
         </ul>
       </section>
 
-      {/* 10 — The Science */}
+      {/* 08 — the science */}
       <section id="s-science" className="section section--rule" aria-labelledby="sci-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">10 / The science</span>
+          <span className="section__kicker micro micro--cyan">08 / The science</span>
         </div>
         <h2 id="sci-title" className="section__title reveal">
           The Science Behind Q-Armor
         </h2>
         <p className="prose reveal">
-          Q-ARMOR creates an ultra-thin, transparent protective layer that forms a strong
-          chemical bond with compatible surfaces. Unlike waxes or traditional sealants that
-          gradually disappear through washing and weather exposure, this protective layer
-          becomes tightly attached to the surface. The result is long-lasting protection
-          combined with exceptional gloss, excellent water repellency and easier maintenance.
-          The coating remains completely transparent, allowing the original colour and finish
-          of the vehicle to remain unchanged while enhancing depth and clarity.
+          Q-ARMOR’s silane chemistry forms a covalent bond with the surface — the coating
+          becomes part of the paint rather than a layer resting on it. It stays completely
+          transparent, deepening gloss and clarity while it protects.
         </p>
       </section>
 
@@ -500,17 +509,14 @@ export default function PostDive() {
         <p className="launch__sub micro reveal">35–50 ml protects an entire car</p>
       </section>
 
-      {/* 11 — Philosophy */}
+      {/* 09 — philosophy */}
       <section id="s-philosophy" className="section philosophy" aria-labelledby="phi-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">11 / Philosophy</span>
+          <span className="section__kicker micro micro--cyan">09 / Philosophy</span>
         </div>
         <h2 id="phi-title" className="section__title reveal">
           Designed Around One Philosophy
         </h2>
-        <p className="prose reveal">
-          Most products promise protection. Q-ARMOR was created to deliver something more.
-        </p>
         <p className="philosophy__word reveal">Confidence.</p>
         <div className="lines">
           <p className="lines__line reveal">Confidence every time you wash your vehicle.</p>
@@ -523,17 +529,24 @@ export default function PostDive() {
         </p>
       </section>
 
-      {/* Waitlist */}
+      {/* Pre-order */}
       <section id="s-access" className="waitlist section" aria-labelledby="waitlist-title">
-        <div className="section__kicker micro micro--cyan reveal">Priority access</div>
+        <div className="waitlist__ghost" aria-hidden="true">
+          <img src={assetUrl('/poster.webp')} alt="" loading="lazy" />
+        </div>
+        <div className="section__kicker micro micro--cyan reveal">Pre-order</div>
         <h2 id="waitlist-title" className="section__title reveal" style={{ marginInline: 'auto' }}>
           Welcome to the Future of Surface Protection.
           <br />
           Welcome to CERAQO<sup className="hero__tm">™</sup>.
         </h2>
+        <p className="batchline reveal">
+          <span className="batchline__num">Batch 001</span> · 20,000 bottles · a new batch
+          every two months
+        </p>
         {joined ? (
           <div className="waitlist__ok" role="status">
-            You’re on the list. We’ll be in touch before launch.
+            You’re on the list for Batch 001. We’ll be in touch before it ships.
           </div>
         ) : (
           <>
@@ -549,14 +562,21 @@ export default function PostDive() {
                 required
               />
               <button className="waitlist__btn" type="submit">
-                Join the Waitlist
+                Pre-order — €169
               </button>
             </form>
             <p className="waitlist__note reveal" role={error ? 'alert' : undefined}>
-              {error ?? 'No spam. One email when Q-ARMOR goes live.'}
+              {error ?? 'No payment today. Your email reserves a bottle in Batch 001.'}
             </p>
           </>
         )}
+        <div className="batchbox reveal">
+          <p>
+            Q-ARMOR is produced in numbered batches of 20,000 bottles, with a new batch every
+            two months. When a batch sells out, pre-orders open for the next one — a
+            production schedule, not artificial scarcity.
+          </p>
+        </div>
       </section>
 
       <footer className="footer">

@@ -5,6 +5,7 @@ import Lenis from 'lenis';
 import Intro from './components/Intro';
 import Dive from './components/Dive';
 import SideNav from './components/SideNav';
+import PreorderCta from './components/PreorderCta';
 import Preloader from './components/Preloader';
 import PostDive from './components/PostDive';
 import { useFrameStore, type FrameProfile } from './hooks/useFrameLoader';
@@ -78,15 +79,17 @@ export default function App() {
       <PostDive />
       <SideNav
         stops={[
-          { id: 's-protection', num: '01', label: 'Protection' },
+          { id: 's-protection', num: '01', label: 'Category' },
           { id: 's-threats', num: '02', label: 'Threats' },
           { id: 's-specs', num: '03', label: 'Specs' },
-          { id: 's-apply', num: '04', label: 'Apply' },
-          { id: 's-kit', num: '05', label: 'Kit' },
-          { id: 's-science', num: '06', label: 'Science' },
-          { id: 's-access', num: '07', label: 'Access' },
+          { id: 's-value', num: '04', label: 'Value' },
+          { id: 's-apply', num: '05', label: 'Apply' },
+          { id: 's-kit', num: '06', label: 'Kit' },
+          { id: 's-science', num: '07', label: 'Science' },
+          { id: 's-access', num: '08', label: 'Pre-order' },
         ]}
       />
+      <PreorderCta on={started} />
       {diag && <Diag profile={profile} progress={progress} ready={ready} started={started} />}
     </>
   );

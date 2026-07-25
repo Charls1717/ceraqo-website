@@ -301,9 +301,9 @@ test('post-dive: specs, launch line and waitlist render', async ({ page }) => {
     window.scrollTo(0, document.body.scrollHeight);
   });
   await page.waitForTimeout(900);
-  await expect(page.getByText('Up to 9H Pencil Hardness')).toBeVisible();
+  await expect(page.locator('.scard__label', { hasText: 'Up to 9H Pencil Hardness' })).toBeVisible();
   await expect(page.getByText(/One bottle\. One car\./)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Join the Waitlist' })).toBeVisible();
+  await expect(page.locator('.waitlist__btn')).toHaveText('Pre-order — €169');
   await page.screenshot({ path: 'qa/post-sections.png', fullPage: false });
 });
 
@@ -378,7 +378,7 @@ test('copy: title + meta carry the approved copy', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('CERAQO™ Q-ARMOR — Advanced Surface Protection');
   const desc = await page.locator('meta[name="description"]').getAttribute('content');
-  expect(desc).toContain('More Than Protection. A New Generation of Surface Engineering.');
+  expect(desc).toContain('Not a wax. Not another ceramic coating.');
 });
 
 test('copy: every approved line is on the page, verbatim', async ({ page }) => {
@@ -394,19 +394,25 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Q-ARMOR changes everything.',
     'No professional installer. No complicated process. No compromise.',
     'A clear, colourless liquid based on silanes.',
-    'More Than Protection. A New Generation of Surface Engineering.',
-    'This is not another wax. This is not another sealant. This is the next evolution of vehicle protection.',
     'Why Q-Armor?',
+    'A new category of surface protection.',
+    'not a reformulated wax, and it is not another ceramic coating',
+    'Applied by you, in your driveway. No installer. No equipment. €169.',
+    'Professional-grade results. A fraction of the price.',
+    '€700–€2,500+',
+    'Batch 001',
+    '20,000 bottles, with a new batch every two months',
+    'a production schedule, not artificial scarcity',
+    'No payment today. Your email reserves a bottle in Batch 001.',
+    'Pre-order — €169',
+    'becomes part of the paint rather than a layer resting on it',
     'Professional Results. Made for Everyone.',
     'That’s all. Professional-grade protection has never been this accessible.',
-    'Experience the Difference',
-    'Engineered for Extreme Environments',
     'Up to 72 Months Protection*',
     'Simple DIY Application',
     'Deep Gloss. Crystal Clear Finish.',
     'Easy Maintenance. Less Cleaning. More Driving.',
     'Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72 months.*',
-    'Built to Last',
     'One Kit. Everything Included.',
     'One kit protects up to two large vehicles, depending on vehicle size and application method.',
     'Suitable For',
@@ -416,7 +422,6 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Welcome to the Future of Surface Protection.',
     'Welcome to CERAQO™.',
     'One bottle. One car.',
-    'Join the Waitlist',
   ];
   const missing = mustContain.filter((t) => !body.includes(t.replace(/\s+/g, ' ')));
   expect(missing, `missing verbatim lines: ${JSON.stringify(missing, null, 2)}`).toEqual([]);
@@ -430,10 +435,32 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
   }
 });
 
+test('persistent pre-order CTA: visible everywhere, never blocks, jumps to the batch section', async ({ page }) => {
+  await waitForStart(page);
+  const cta = page.locator('.cta__btn');
+  await expect(cta).toBeVisible(); // over the dive's first frame
+  await scrubTo(page, 0.5); // mid-scrub
+  await expect(cta).toBeVisible();
+  // scrolling still works with the CTA overlaid (wrapper is inert)
+  const y0 = await page.evaluate(() => window.scrollY);
+  await page.mouse.wheel(0, 400);
+  await page.waitForTimeout(600);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(y0);
+  await cta.click();
+  await page.waitForTimeout(2600); // lenis glide
+  const inView = await page.evaluate(() => {
+    const el = document.getElementById('s-access')!;
+    const r = el.getBoundingClientRect();
+    return r.top < innerHeight * 0.6 && r.bottom > 0;
+  });
+  expect(inView, 'CTA lands on the pre-order section').toBe(true);
+  await expect(cta).toBeVisible(); // and it is still there at the end
+});
+
 test('waitlist mechanics still work', async ({ page }) => {
   await waitForStart(page);
   await page.locator('.waitlist__input').scrollIntoViewIfNeeded();
   await page.locator('.waitlist__input').fill('driver@example.com');
   await page.locator('.waitlist__btn').click();
-  await expect(page.locator('.waitlist__ok')).toContainText('You’re on the list.');
+  await expect(page.locator('.waitlist__ok')).toContainText('You’re on the list for Batch 001.');
 });

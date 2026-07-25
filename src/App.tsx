@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import Intro from './components/Intro';
 import Dive from './components/Dive';
 import SideNav from './components/SideNav';
 import PreorderCta from './components/PreorderCta';
@@ -75,19 +74,13 @@ export default function App() {
     <>
       <Preloader progress={progress} done={started} />
       <Dive storeRef={storeRef} profile={profile} active={started} />
-      <Intro />
       <PostDive />
       <SideNav
         stops={[
           { id: 's-protection', num: '01', label: 'Category' },
-          { id: 's-threats', num: '02', label: 'Threats' },
-          { id: 's-specs', num: '03', label: 'Specs' },
-          { id: 's-value', num: '04', label: 'Value' },
-          { id: 's-apply', num: '05', label: 'Apply' },
-          { id: 's-kit', num: '06', label: 'Kit' },
-          { id: 's-science', num: '07', label: 'Science' },
-          { id: 's-faq', num: '08', label: 'FAQ' },
-          { id: 's-access', num: '09', label: 'Pre-order' },
+          { id: 's-specs', num: '02', label: 'Proof' },
+          { id: 's-value', num: '03', label: 'Value' },
+          { id: 's-access', num: '04', label: 'Pre-order' },
         ]}
       />
       <PreorderCta on={started} />

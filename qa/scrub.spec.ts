@@ -442,12 +442,11 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Sealants wear away.',
     'Professional coatings demand installers, equipment and booked shop time.',
     'Q-ARMOR changes everything.',
-    'No professional installer. No complicated process. No compromise.',
     'The molecule that changes everything.',
     'Why Q-Armor?',
     'A new category of surface protection.',
     'Not a reformulated wax. Not another ceramic coating.',
-    'Applied by you, in your driveway. No installer. No equipment. €169.',
+    'Applied by you, in your driveway. No installer. No equipment. No compromise. €169.',
     'Every drive attacks your paint. Invisibly. Constantly.',
     'One coating against all of it.',
     'Professional-grade results. A fraction of the price.',
@@ -464,7 +463,7 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Q-ARMOR doesn’t rest on your paint — it bonds with it. Covalently.',
     'Professional Results. Made for Everyone.',
     'Four steps. About an hour. No experience needed.',
-    'That’s all. Professional-grade protection has never been this accessible.',
+    'That’s all — professional-grade protection has never been this accessible.',
     'Up to 72 Months Protection*',
     'Simple DIY Application',
     'Deep Gloss. Crystal Clear Finish.',
@@ -476,10 +475,8 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Everything required. Nothing extra.',
     'One kit protects up to two large vehicles.',
     'Suitable For',
-    'The Science Behind Q-Armor',
-    'Designed Around One Philosophy',
-    'Confidence every time you park and look back.',
-    'Because it’s never just about paint. It’s about pride of ownership.',
+    'Confidence — every wash, every rainfall, every time you park and look back.',
+    'It’s never just paint. It’s pride of ownership.',
     'Welcome to the Future of Surface Protection.',
     'Welcome to CERAQO™.',
     'One bottle. One car.',
@@ -530,6 +527,9 @@ test('waitlist mechanics still work', async ({ page }) => {
 test('faq: every question opens and answers carry no new claims markers', async ({ page }) => {
   await waitForStart(page);
   await page.locator('#s-faq').scrollIntoViewIfNeeded();
+  // The last three questions live behind the "More questions"
+  // disclosure — open it so all seven items are reachable.
+  await page.locator('.faq__more > .faq__q').click();
   const items = page.locator('.faq__item');
   await expect(items).toHaveCount(7);
   const n = await items.count();

@@ -117,12 +117,11 @@ const COMPARE_ROWS: { label: string; q: string; pro: string }[] = [
 ];
 
 /**
- * Every answer is assembled from claims already on the page — the
- * FAQ introduces no new product facts. The charge-timing answer
- * follows the PREORDER_URL switch so it never promises a checkout
- * that isn't live yet.
+ * FAQ split for the collapsed accordion: the four conversion-critical
+ * questions are always listed; the remaining three sit behind a "More
+ * questions" disclosure. All seven stay in the DOM — nothing deleted.
  */
-const FAQ: { q: string; a: string }[] = [
+const FAQ_PRIMARY: { q: string; a: string }[] = [
   {
     q: 'What exactly is Q-ARMOR?',
     a: 'A newly developed silane chemistry — not a wax, not another ceramic coating. It bonds with your paint and outperforms premium ceramic coatings in hardness and durability.',
@@ -136,6 +135,15 @@ const FAQ: { q: string; a: string }[] = [
     a: 'Up to 72 months, depending on preparation, environment and washing routine.',
   },
   {
+    q: 'When am I charged?',
+    a: PREORDER_URL
+      ? 'At checkout, the moment you place your pre-order. Your order secures your spot in Batch 001.'
+      : 'At checkout, once pre-orders open. Until then, your email holds your place in Batch 001.',
+  },
+];
+
+const FAQ_MORE: { q: string; a: string }[] = [
+  {
     q: 'How hard is the cured layer?',
     a: 'Up to 9H pencil hardness — engineered to outperform today’s premium ceramic coatings.',
   },
@@ -147,13 +155,16 @@ const FAQ: { q: string; a: string }[] = [
     q: 'How does the batch model work?',
     a: '20,000 numbered bottles per batch. A new batch every two months. When one sells out, pre-orders open for the next — a production schedule, not artificial scarcity.',
   },
-  {
-    q: 'When am I charged?',
-    a: PREORDER_URL
-      ? 'At checkout, the moment you place your pre-order. Your order secures your spot in Batch 001.'
-      : 'At checkout, once pre-orders open. Until then, your email holds your place in Batch 001.',
-  },
 ];
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="faq__item reveal">
+      <summary className="faq__q">{q}</summary>
+      <p className="faq__a prose">{a}</p>
+    </details>
+  );
+}
 
 /** Instrument-style arc meter, animated on reveal. */
 function Gauge({
@@ -268,7 +279,7 @@ export default function PostDive() {
 
   return (
     <div ref={rootRef} className="post">
-      {/* 01 — the category claim */}
+      {/* A — Hook: the compromise era, the category claim, the threats */}
       <section id="s-protection" className="section section--rule section--glow-a" aria-labelledby="mtp-title">
         <div className="section__kickrow reveal">
           <span className="section__kicker micro micro--cyan">01 / A new category</span>
@@ -279,12 +290,17 @@ export default function PostDive() {
               A new category of surface protection.
             </h2>
             <p className="prose reveal">
-              Not a reformulated wax. Not another ceramic coating. Q-ARMOR is a newly
-              developed silane chemistry that becomes part of your paint — engineered to
-              outperform premium ceramic coatings in hardness and durability.
+              Protection has always meant compromise. Waxes fade. Sealants wear away.
+              Professional coatings demand installers, equipment and booked shop time.
+            </p>
+            <p className="prose reveal">
+              Q-ARMOR changes everything. Not a reformulated wax. Not another ceramic
+              coating. A newly developed silane chemistry that becomes part of your paint —
+              engineered to outperform premium ceramic coatings.
             </p>
             <p className="prose prose--turn reveal">
-              Applied by you, in your driveway. No installer. No equipment. €169.
+              Applied by you, in your driveway. No installer. No equipment. No compromise.
+              €169.
             </p>
           </div>
           <figure className="split__media reveal">
@@ -297,37 +313,25 @@ export default function PostDive() {
             </span>
           </figure>
         </div>
-      </section>
-
-      {/* 02 — the threats */}
-      <section id="s-threats" className="section section--rule section--dots" aria-labelledby="why-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">02 / The threats</span>
+        <div id="s-threats" className="subblock reveal">
+          <div className="subhead micro micro--cyan">Why Q-Armor?</div>
+          <p className="hookline">Every drive attacks your paint. Invisibly. Constantly.</p>
+          <ul className="chips chips--icons">
+            {THREATS.map((t) => (
+              <li key={t.label} className="chip chip--icon">
+                {t.icon}
+                {t.label}
+              </li>
+            ))}
+            <li className="chip chip--turn">One coating against all of it.</li>
+          </ul>
         </div>
-        <h2 id="why-title" className="section__title section__title--xl reveal">
-          Why Q-Armor?
-        </h2>
-        <p className="prose reveal">
-          Every drive attacks your paint. Invisibly. Constantly.
-        </p>
-        <ul className="tgrid stagger">
-          {THREATS.map((t, i) => (
-            <li key={t.label} className="tcard sitem">
-              <span className="tcard__icon">{t.icon}</span>
-              <span className="tcard__num micro">{String(i + 1).padStart(2, '0')}</span>
-              <span className="tcard__label">{t.label}</span>
-            </li>
-          ))}
-          <li className="tcard tcard--turn sitem">
-            <span className="tcard__turn">One coating against all of it.</span>
-          </li>
-        </ul>
       </section>
 
-      {/* 03 — specifications */}
+      {/* B — Proof: specifications + the science, one dense grid */}
       <section id="s-specs" className="section section--rule section--glow-b" aria-labelledby="specs-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">03 / Specifications</span>
+          <span className="section__kicker micro micro--cyan">02 / Specifications &amp; science</span>
         </div>
         <h2 id="specs-title" className="section__title section__title--xl reveal">
           Q-ARMOR at a glance.
@@ -360,23 +364,16 @@ export default function PostDive() {
             </article>
           </div>
         </div>
-
-        <div className="duo">
+        <p id="s-science" className="prose prose--science reveal">
+          Q-ARMOR doesn’t rest on your paint — it bonds with it. Covalently. It cannot
+          flake off or be washed off. And it stays perfectly transparent: nothing but
+          depth, gloss and protection.
+        </p>
+        <div className="duo duo--single">
           <div className="duo__cell duo__cell--card reveal">
-            <span className="scard__icon">
-              <IconGloss />
-            </span>
             <h3 className="duo__title">Deep Gloss. Crystal Clear Finish.</h3>
-            <p className="prose">
-              No heavy residues. No artificial shine. Just deeper, sharper, more reflective
-              gloss.
-            </p>
-          </div>
-          <div className="duo__cell duo__cell--card reveal">
-            <span className="scard__icon">
-              <IconClean />
-            </span>
-            <h3 className="duo__title">Easy Maintenance. Less Cleaning. More Driving.</h3>
+            <p className="prose">No heavy residues. No artificial shine. Just deeper, sharper, more reflective gloss.</p>
+            <h3 className="duo__title duo__title--second">Easy Maintenance. Less Cleaning. More Driving.</h3>
             <p className="prose">Water, dirt and oil struggle to stick.</p>
             <ul className="checklist">
               {MAINTENANCE.map((m) => (
@@ -405,10 +402,10 @@ export default function PostDive() {
         </div>
       </section>
 
-      {/* 04 — price & performance */}
+      {/* C — Value: price comparison + kit + compatibility */}
       <section id="s-value" className="section section--rule section--glow-a" aria-labelledby="value-title">
         <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">04 / Price &amp; performance</span>
+          <span className="section__kicker micro micro--cyan">03 / Price &amp; performance</span>
         </div>
         <h2 id="value-title" className="section__title section__title--xl reveal">
           Professional-grade results. A fraction of the price.
@@ -448,197 +445,141 @@ export default function PostDive() {
         <p className="compare__note micro reveal">
           Professional pricing varies by market, vehicle size, preparation and coating tier.
         </p>
-      </section>
-
-      {/* 05 — application */}
-      <section id="s-apply" className="section section--rule" aria-labelledby="pro-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">05 / Application</span>
-        </div>
-        <h2 id="pro-title" className="section__title reveal">
-          Professional Results. Made for Everyone.
-        </h2>
-        <p className="prose reveal">
-          Four steps. About an hour. No experience needed.
-        </p>
-        <ol className="steps">
-          {STEPS.map((s, i) => (
-            <li key={s} className="step reveal">
-              <span className="step__num">{String(i + 1).padStart(2, '0')}</span>
-              <span className="step__label">{s}</span>
-            </li>
-          ))}
-        </ol>
-        <p className="prose prose--turn reveal">
-          That’s all. Professional-grade protection has never been this accessible.
-        </p>
-      </section>
-
-      {/* 06 — kit contents */}
-      <section id="s-kit" className="section section--rule" aria-labelledby="kit-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">06 / In the box</span>
-        </div>
-        <h2 id="kit-title" className="section__title reveal">
-          One Kit. Everything Included.
-        </h2>
-        <p className="prose reveal">Everything required. Nothing extra.</p>
-        <ul className="kit">
-          {KIT.map((k, i) => (
-            <li key={k} className="kit__item reveal">
-              <span className="kit__num">{String(i + 1).padStart(2, '0')}</span>
-              {k}
-            </li>
-          ))}
-        </ul>
-        <p className="prose prose--dim reveal">
-          One kit protects up to two large vehicles.
-        </p>
-      </section>
-
-      {/* 07 — compatibility */}
-      <section id="s-fit" className="section section--rule" aria-labelledby="fit-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">07 / Compatibility</span>
-        </div>
-        <h2 id="fit-title" className="section__title reveal">
-          Suitable For
-        </h2>
-        <ul className="chips chips--roomy reveal">
-          {SUITABLE.map((s) => (
-            <li key={s} className="chip">
-              {s}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* 08 — the science */}
-      <section id="s-science" className="section section--rule" aria-labelledby="sci-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">08 / The science</span>
-        </div>
-        <h2 id="sci-title" className="section__title reveal">
-          The Science Behind Q-Armor
-        </h2>
-        <p className="prose reveal">
-          Q-ARMOR doesn’t rest on your paint — it bonds with it. Covalently. It cannot
-          flake off or be washed off. And it stays perfectly transparent: nothing but
-          depth, gloss and protection.
-        </p>
-      </section>
-
-      {/* Launch banner */}
-      <section className="launch section">
-        <div className="launch__over micro micro--cyan reveal">Launch window</div>
-        <p className="launch__line reveal">
-          One bottle. One car.
-          <br />
-          Launching <em>2026</em>.
-        </p>
-        <p className="launch__sub micro reveal">35–50 ml protects an entire car</p>
-      </section>
-
-      {/* 09 — philosophy */}
-      <section id="s-philosophy" className="section philosophy" aria-labelledby="phi-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">09 / Philosophy</span>
-        </div>
-        <h2 id="phi-title" className="section__title reveal">
-          Designed Around One Philosophy
-        </h2>
-        <p className="philosophy__word reveal">Confidence.</p>
-        <div className="lines">
-          <p className="lines__line reveal">Confidence every time you wash your vehicle.</p>
-          <p className="lines__line reveal">Confidence every time it rains.</p>
-          <p className="lines__line reveal">Confidence every time you park and look back.</p>
-        </div>
-        <p className="prose prose--turn reveal">
-          Because it’s never just about paint. It’s about pride of ownership.
-        </p>
-      </section>
-
-      {/* 10 — questions, answered before the ask */}
-      <section id="s-faq" className="section section--rule section--dots" aria-labelledby="faq-title">
-        <div className="section__kickrow reveal">
-          <span className="section__kicker micro micro--cyan">10 / Questions</span>
-        </div>
-        <h2 id="faq-title" className="section__title reveal">
-          Before You Pre-order
-        </h2>
-        <div className="faq">
-          {FAQ.map((f) => (
-            <details key={f.q} className="faq__item reveal">
-              <summary className="faq__q">{f.q}</summary>
-              <p className="faq__a prose">{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      {/* Pre-order */}
-      <section id="s-access" className="waitlist section" aria-labelledby="waitlist-title">
-        <div className="waitlist__ghost" aria-hidden="true">
-          <img src={assetUrl('/poster.webp')} alt="" loading="lazy" />
-        </div>
-        <div className="section__kicker micro micro--cyan reveal">Pre-order</div>
-        <h2 id="waitlist-title" className="section__title reveal" style={{ marginInline: 'auto' }}>
-          Welcome to the Future of Surface Protection.
-          <br />
-          Welcome to CERAQO<sup className="hero__tm">™</sup>.
-        </h2>
-        <p className="batchline reveal">
-          <span className="batchline__num">Batch 001</span> · 20,000 bottles · a new batch
-          every two months
-        </p>
-        {PREORDER_URL ? (
-          // Live checkout mode — flips on automatically once the
-          // Shopify URL is set in src/config.ts.
-          <>
-            <a className="waitlist__btn waitlist__btn--link reveal" href={PREORDER_URL} target="_blank" rel="noopener">
-              Pre-order — €169
-            </a>
-            <p className="waitlist__note reveal">
-              Payment is taken at checkout. Your order secures your spot in Batch 001.
-            </p>
-          </>
-        ) : joined ? (
-          <div className="waitlist__ok" role="status">
-            You’re on the list for Batch 001. We’ll be in touch before it ships.
-          </div>
-        ) : (
-          <>
-            <form className="waitlist__form reveal" onSubmit={submit} noValidate>
-              <input
-                className="waitlist__input"
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                aria-label="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <button className="waitlist__btn" type="submit">
-                Pre-order — €169
-              </button>
-            </form>
-            <p className="waitlist__note reveal" role={error ? 'alert' : undefined}>
-              {error ??
-                'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.'}
-            </p>
-          </>
-        )}
-        <p className="waitlist__legal reveal">
-          Your address is used only to contact you about Batch 001 — never shared, never
-          sold. <a className="waitlist__legal-link" href="#privacy">Privacy notice</a>
-        </p>
-        <div className="batchbox reveal">
-          <p>
-            Numbered batches of 20,000 bottles. A new batch every two months. When one
-            sells out, pre-orders open for the next — a production schedule, not
-            artificial scarcity.
+        <div id="s-kit" className="subblock reveal">
+          <div className="subhead micro micro--cyan">One Kit. Everything Included.</div>
+          <ul className="chips chips--kit">
+            {KIT.map((k, i) => (
+              <li key={k} className="chip chip--icon">
+                <span className="chipnum">{String(i + 1).padStart(2, '0')}</span>
+                {k}
+              </li>
+            ))}
+          </ul>
+          <p className="prose prose--dim prose--tight">
+            Everything required. Nothing extra. One kit protects up to two large vehicles.
           </p>
+        </div>
+        <div id="s-fit" className="subblock reveal">
+          <div className="subhead micro micro--cyan">Suitable For</div>
+          <ul className="chips">
+            {SUITABLE.map((s) => (
+              <li key={s} className="chip">
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* D — Close: application, philosophy, FAQ, pre-order */}
+      <section id="s-close" className="section section--rule section--dots" aria-labelledby="close-title">
+        <div id="s-apply">
+          <div className="section__kickrow reveal">
+            <span className="section__kicker micro micro--cyan">04 / Application</span>
+          </div>
+          <h2 id="close-title" className="section__title reveal">
+            Professional Results. Made for Everyone.
+          </h2>
+          <ol className="stepstrip reveal">
+            {STEPS.map((s, i) => (
+              <li key={s}>
+                <span className="stepstrip__num">{String(i + 1).padStart(2, '0')}</span>
+                {s}
+              </li>
+            ))}
+          </ol>
+          <p className="prose reveal">
+            Four steps. About an hour. No experience needed. That’s all — professional-grade
+            protection has never been this accessible.
+          </p>
+        </div>
+        <p id="s-philosophy" className="philline reveal">
+          Confidence — every wash, every rainfall, every time you park and look back. It’s
+          never just paint. It’s pride of ownership.
+        </p>
+        <p className="launchline reveal">
+          One bottle. One car. Launching <em>2026</em>.{' '}
+          <span className="micro">35–50 ml protects an entire car</span>
+        </p>
+
+        <div id="s-faq" className="subblock">
+          <div className="subhead micro micro--cyan reveal">Before You Pre-order</div>
+          <div className="faq">
+            {FAQ_PRIMARY.map((f) => (
+              <FaqItem key={f.q} q={f.q} a={f.a} />
+            ))}
+            <details className="faq__more reveal">
+              <summary className="faq__q">More questions</summary>
+              {FAQ_MORE.map((f) => (
+                <FaqItem key={f.q} q={f.q} a={f.a} />
+              ))}
+            </details>
+          </div>
+        </div>
+
+        <div id="s-access" className="waitlist" aria-labelledby="waitlist-title">
+          <div className="waitlist__ghost" aria-hidden="true">
+            <img src={assetUrl('/poster.webp')} alt="" loading="lazy" />
+          </div>
+          <div className="section__kicker micro micro--cyan reveal">Pre-order</div>
+          <h2 id="waitlist-title" className="section__title reveal" style={{ marginInline: 'auto' }}>
+            Welcome to the Future of Surface Protection.
+            <br />
+            Welcome to CERAQO<sup className="hero__tm">™</sup>.
+          </h2>
+          <p className="batchline reveal">
+            <span className="batchline__num">Batch 001</span> · 20,000 bottles · a new batch
+            every two months
+          </p>
+          {PREORDER_URL ? (
+            // Live checkout mode — flips on automatically once the
+            // Shopify URL is set in src/config.ts.
+            <>
+              <a className="waitlist__btn waitlist__btn--link reveal" href={PREORDER_URL} target="_blank" rel="noopener">
+                Pre-order — €169
+              </a>
+              <p className="waitlist__note reveal">
+                Payment is taken at checkout. Your order secures your spot in Batch 001.
+              </p>
+            </>
+          ) : joined ? (
+            <div className="waitlist__ok" role="status">
+              You’re on the list for Batch 001. We’ll be in touch before it ships.
+            </div>
+          ) : (
+            <>
+              <form className="waitlist__form reveal" onSubmit={submit} noValidate>
+                <input
+                  className="waitlist__input"
+                  type="email"
+                  name="email"
+                  placeholder="you@example.com"
+                  aria-label="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <button className="waitlist__btn" type="submit">
+                  Pre-order — €169
+                </button>
+              </form>
+              <p className="waitlist__note reveal" role={error ? 'alert' : undefined}>
+                {error ??
+                  'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.'}
+              </p>
+            </>
+          )}
+          <p className="waitlist__legal reveal">
+            Your address is used only to contact you about Batch 001 — never shared, never
+            sold. <a className="waitlist__legal-link" href="#privacy">Privacy notice</a>
+          </p>
+          <div className="batchbox reveal">
+            <p>
+              Numbered batches of 20,000 bottles. A new batch every two months. When one
+              sells out, pre-orders open for the next — a production schedule, not
+              artificial scarcity.
+            </p>
+          </div>
         </div>
       </section>
 

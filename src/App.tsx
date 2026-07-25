@@ -80,7 +80,8 @@ export default function App() {
           { id: 's-protection', num: '01', label: 'Category' },
           { id: 's-specs', num: '02', label: 'Proof' },
           { id: 's-value', num: '03', label: 'Value' },
-          { id: 's-access', num: '04', label: 'Pre-order' },
+          { id: 's-preorder', num: '04', label: 'Pre-order' },
+          { id: 's-contact', num: '05', label: 'Contact' },
         ]}
       />
       <PreorderCta on={started} />

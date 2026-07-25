@@ -212,6 +212,31 @@ function Gauge({
   );
 }
 
+/** Glide to the compact pre-order block (mirrors the floating pill). */
+function jumpToPreorder() {
+  const el = document.getElementById('s-preorder');
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY - 24;
+  const lenis = (
+    window as unknown as { __lenis?: { scrollTo: (t: number, o?: object) => void } }
+  ).__lenis;
+  if (lenis) lenis.scrollTo(top, { duration: 1.6 });
+  else window.scrollTo(0, top);
+}
+
+/** One consistent buy control: link when checkout is live, glide otherwise. */
+function BuyButton() {
+  return PREORDER_URL ? (
+    <a className="buybtn" href={PREORDER_URL} target="_blank" rel="noopener">
+      Pre-order — €169
+    </a>
+  ) : (
+    <button type="button" className="buybtn" onClick={jumpToPreorder}>
+      Pre-order — €169
+    </button>
+  );
+}
+
 export default function PostDive() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState('');
@@ -221,6 +246,9 @@ export default function PostDive() {
   const [fitOpen, setFitOpen] = useState(startOpen);
   const [factorsOpen, setFactorsOpen] = useState(startOpen);
   const [batchOpen, setBatchOpen] = useState(startOpen);
+  const [inq, setInq] = useState({ name: '', company: '', email: '', message: '' });
+  const [inqError, setInqError] = useState<string | null>(null);
+  const [inqSent, setInqSent] = useState(false);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -286,6 +314,26 @@ export default function PostDive() {
       /* storage unavailable — the confirmation still stands */
     }
     setJoined(true);
+  };
+
+  // Placeholder capture: stored in the visitor's browser only until a
+  // real destination (inbox / form service) is confirmed and wired.
+  const submitInquiry = (e: FormEvent) => {
+    e.preventDefault();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(inq.email.trim());
+    if (!inq.name.trim() || !emailOk || !inq.message.trim()) {
+      setInqError('Please fill in your name, a valid email and a short message.');
+      return;
+    }
+    setInqError(null);
+    try {
+      const list = JSON.parse(localStorage.getItem('ceraqo-inquiries') ?? '[]') as unknown[];
+      list.push({ ...inq, at: new Date().toISOString() });
+      localStorage.setItem('ceraqo-inquiries', JSON.stringify(list));
+    } catch {
+      /* storage unavailable — the confirmation still stands */
+    }
+    setInqSent(true);
   };
 
   return (
@@ -422,6 +470,9 @@ export default function PostDive() {
             ))}
           </ul>
         </div>
+        <div className="buyrow reveal">
+          <BuyButton />
+        </div>
       </section>
 
       {/* C — Value: price comparison + kit + compatibility */}
@@ -472,6 +523,70 @@ export default function PostDive() {
         <p className="compare__note micro reveal">
           Professional pricing varies by market, vehicle size, preparation and coating tier.
         </p>
+
+        {/* The consumer pre-order lives here now — right where the
+            price case has just been made. The bottom of the page
+            belongs to partnerships. */}
+        <div id="s-preorder" className="subblock preorder reveal">
+          <div className="subhead micro micro--cyan">Pre-order</div>
+          <p className="batchline">
+            <span className="batchline__num">Batch 001</span> · 20,000 bottles · a new batch
+            every two months
+          </p>
+          {PREORDER_URL ? (
+            // Live checkout mode — flips on automatically once the
+            // Shopify URL is set in src/config.ts.
+            <>
+              <BuyButton />
+              <p className="waitlist__note">
+                Payment is taken at checkout. Your order secures your spot in Batch 001.
+              </p>
+            </>
+          ) : joined ? (
+            <div className="waitlist__ok" role="status">
+              You’re on the list for Batch 001. We’ll be in touch before it ships.
+            </div>
+          ) : (
+            <>
+              <form className="waitlist__form" onSubmit={submit} noValidate>
+                <input
+                  className="waitlist__input"
+                  type="email"
+                  name="email"
+                  placeholder="you@example.com"
+                  aria-label="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <button className="waitlist__btn" type="submit">
+                  Pre-order — €169
+                </button>
+              </form>
+              <p className="waitlist__note" role={error ? 'alert' : undefined}>
+                {error ??
+                  'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.'}
+              </p>
+            </>
+          )}
+          <p className="waitlist__legal">
+            Your address is used only to contact you about Batch 001 — never shared, never
+            sold. <a className="waitlist__legal-link" href="#privacy">Privacy notice</a>
+          </p>
+          {!batchOpen && (
+            <button type="button" className="expander" onClick={() => setBatchOpen(true)}>
+              How the batch model works
+            </button>
+          )}
+          <div className="batchbox" hidden={!batchOpen}>
+            <p>
+              Numbered batches of 20,000 bottles. A new batch every two months. When one
+              sells out, pre-orders open for the next — a production schedule, not
+              artificial scarcity.
+            </p>
+          </div>
+        </div>
+
         <div id="s-kit" className="subblock reveal">
           <div className="subhead micro micro--cyan">One Kit. Everything Included.</div>
           <ul className="chips chips--kit">
@@ -551,84 +666,85 @@ export default function PostDive() {
           </div>
         </div>
 
-        <div id="s-access" className="waitlist" aria-labelledby="waitlist-title">
+        <div id="s-contact" className="waitlist" aria-labelledby="contact-title">
           <div className="waitlist__ghost" aria-hidden="true">
             <img src={assetUrl('/poster.webp')} alt="" loading="lazy" />
           </div>
-          <div className="section__kicker micro micro--cyan reveal">Pre-order</div>
-          <h2 id="waitlist-title" className="section__title reveal" style={{ marginInline: 'auto' }}>
+          <div className="section__kicker micro micro--cyan reveal">Partnerships &amp; bulk orders</div>
+          <h2 id="contact-title" className="section__title reveal" style={{ marginInline: 'auto' }}>
             Welcome to the Future of Surface Protection.
             <br />
             Welcome to CERAQO<sup className="hero__tm">™</sup>.
           </h2>
-          <p className="batchline reveal">
-            <span className="batchline__num">Batch 001</span> · 20,000 bottles · a new batch
-            every two months
+          <p className="prose reveal">
+            Interested in a partnership or a larger order? Get in touch below.
           </p>
-          {PREORDER_URL ? (
-            // Live checkout mode — flips on automatically once the
-            // Shopify URL is set in src/config.ts.
-            <>
-              <a className="waitlist__btn waitlist__btn--link reveal" href={PREORDER_URL} target="_blank" rel="noopener">
-                Pre-order — €169
-              </a>
-              <p className="waitlist__note reveal">
-                Payment is taken at checkout. Your order secures your spot in Batch 001.
-              </p>
-            </>
-          ) : joined ? (
+          {inqSent ? (
             <div className="waitlist__ok" role="status">
-              You’re on the list for Batch 001. We’ll be in touch before it ships.
+              Thanks — your inquiry has been recorded.
             </div>
           ) : (
-            <>
-              <form className="waitlist__form reveal" onSubmit={submit} noValidate>
+            <form className="bform reveal" onSubmit={submitInquiry} noValidate>
+              <div className="bform__row">
                 <input
-                  className="waitlist__input"
-                  type="email"
-                  name="email"
-                  placeholder="you@example.com"
-                  aria-label="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  className="bform__input"
+                  name="name"
+                  placeholder="Name"
+                  aria-label="Name"
+                  value={inq.name}
+                  onChange={(e) => setInq({ ...inq, name: e.target.value })}
                   required
                 />
-                <button className="waitlist__btn" type="submit">
-                  Pre-order — €169
-                </button>
-              </form>
-              <p className="waitlist__note reveal" role={error ? 'alert' : undefined}>
-                {error ??
-                  'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.'}
-              </p>
-            </>
+                <input
+                  className="bform__input"
+                  name="company"
+                  placeholder="Company (optional)"
+                  aria-label="Company (optional)"
+                  value={inq.company}
+                  onChange={(e) => setInq({ ...inq, company: e.target.value })}
+                />
+              </div>
+              <input
+                className="bform__input"
+                type="email"
+                name="email"
+                placeholder="you@company.com"
+                aria-label="Email address"
+                value={inq.email}
+                onChange={(e) => setInq({ ...inq, email: e.target.value })}
+                required
+              />
+              <textarea
+                className="bform__input bform__msg"
+                name="message"
+                rows={4}
+                placeholder="Tell us about your inquiry — partnership, wholesale, bulk order…"
+                aria-label="Your inquiry"
+                value={inq.message}
+                onChange={(e) => setInq({ ...inq, message: e.target.value })}
+                required
+              />
+              {inqError && (
+                <p className="waitlist__note" role="alert">
+                  {inqError}
+                </p>
+              )}
+              <button className="waitlist__btn bform__submit" type="submit">
+                Send inquiry
+              </button>
+            </form>
           )}
-          <p className="waitlist__legal reveal">
-            Your address is used only to contact you about Batch 001 — never shared, never
-            sold. <a className="waitlist__legal-link" href="#privacy">Privacy notice</a>
-          </p>
-          {!batchOpen && (
-            <button type="button" className="expander expander--center reveal" onClick={() => setBatchOpen(true)}>
-              How the batch model works
-            </button>
-          )}
-          <div className="batchbox reveal" hidden={!batchOpen}>
-            <p>
-              Numbered batches of 20,000 bottles. A new batch every two months. When one
-              sells out, pre-orders open for the next — a production schedule, not
-              artificial scarcity.
-            </p>
-          </div>
         </div>
       </section>
 
       <div id="privacy" className="legal">
         <h3 className="legal__title micro micro--cyan">Privacy notice</h3>
         <p className="legal__text">
-          The email address you submit is used solely to contact you about Q-ARMOR
-          pre-orders and batch availability. It is never sold or shared with third
-          parties, and you can request its removal at any time. Full purchase terms are
-          presented at checkout when pre-orders open.
+          The details you submit are used solely to contact you about Q-ARMOR
+          pre-orders and batch availability, or to respond to your partnership
+          inquiry. They are never sold or shared with third parties, and you can
+          request their removal at any time. Full purchase terms are presented at
+          checkout when pre-orders open.
         </p>
       </div>
 

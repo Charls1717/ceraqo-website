@@ -352,7 +352,7 @@ test('post-dive: specs, launch line and waitlist render', async ({ page }) => {
   await page.waitForTimeout(900);
   await expect(page.locator('.scard__label', { hasText: 'Up to 9H Pencil Hardness' })).toBeVisible();
   await expect(page.getByText(/One bottle\. One car\./)).toBeVisible();
-  await expect(page.locator('.waitlist__btn')).toHaveText('Pre-order — €169');
+  await expect(page.locator('.preorder .waitlist__btn')).toHaveText('Pre-order — €169');
   await page.screenshot({ path: 'qa/post-sections.png', fullPage: false });
 });
 
@@ -478,6 +478,8 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Confidence — every wash, every rainfall, every time you park and look back.',
     'It’s never just paint. It’s pride of ownership.',
     'Welcome to the Future of Surface Protection.',
+    'Interested in a partnership or a larger order? Get in touch below.',
+    'Send inquiry',
     'Welcome to CERAQO™.',
     'One bottle. One car.',
   ];
@@ -508,20 +510,57 @@ test('persistent pre-order CTA: visible everywhere, never blocks, jumps to the b
   await cta.click();
   await page.waitForTimeout(2600); // lenis glide
   const inView = await page.evaluate(() => {
-    const el = document.getElementById('s-access')!;
+    const el = document.getElementById('s-preorder')!;
     const r = el.getBoundingClientRect();
     return r.top < innerHeight * 0.6 && r.bottom > 0;
   });
-  expect(inView, 'CTA lands on the pre-order section').toBe(true);
+  expect(inView, 'CTA lands on the compact pre-order block').toBe(true);
   await expect(cta).toBeVisible(); // and it is still there at the end
 });
 
-test('waitlist mechanics still work', async ({ page }) => {
+test('inline buy CTA: consistent label everywhere, glides to the pre-order block', async ({ page }) => {
+  await waitForStart(page);
+  // Fallback mode: one inline .buybtn (end of Proof); the post-pricing
+  // CTA is the pre-order form's submit button. Every buy control
+  // carries the identical label.
+  const buys = page.locator('.buybtn');
+  await expect(buys).toHaveCount(1);
+  await expect(buys.first()).toHaveText('Pre-order — €169');
+  await expect(page.locator('.preorder .waitlist__btn')).toHaveText('Pre-order — €169');
+  await buys.first().scrollIntoViewIfNeeded();
+  await buys.first().click();
+  await page.waitForTimeout(2200);
+  const inView = await page.evaluate(() => {
+    const el = document.getElementById('s-preorder')!;
+    const r = el.getBoundingClientRect();
+    return r.top < innerHeight * 0.6 && r.bottom > -innerHeight * 0.2;
+  });
+  expect(inView, 'buy button glides to the pre-order block').toBe(true);
+});
+
+test('waitlist mechanics still work (now in the value section)', async ({ page }) => {
   await waitForStart(page);
   await page.locator('.waitlist__input').scrollIntoViewIfNeeded();
   await page.locator('.waitlist__input').fill('driver@example.com');
-  await page.locator('.waitlist__btn').click();
+  await page.locator('.preorder .waitlist__btn').click();
   await expect(page.locator('.waitlist__ok')).toContainText('You’re on the list for Batch 001.');
+});
+
+test('partnership form: validates, submits, confirms', async ({ page }) => {
+  await waitForStart(page);
+  await page.locator('.bform').scrollIntoViewIfNeeded();
+  // Empty submit surfaces the validation line
+  await page.locator('.bform__submit').click();
+  await expect(page.locator('.bform .waitlist__note')).toContainText('name, a valid email');
+  // Happy path
+  await page.locator('.bform input[name="name"]').fill('Alex Tester');
+  await page.locator('.bform input[name="email"]').fill('alex@company.com');
+  await page.locator('.bform textarea[name="message"]').fill('Wholesale inquiry for 500 kits.');
+  await page.locator('.bform__submit').click();
+  await expect(page.locator('#s-contact .waitlist__ok')).toContainText('your inquiry has been recorded');
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ceraqo-inquiries') ?? '[]'));
+  expect(stored.length).toBe(1);
+  expect(stored[0].name).toBe('Alex Tester');
 });
 
 test('faq: every question opens and answers carry no new claims markers', async ({ page }) => {
@@ -584,7 +623,7 @@ test.describe('mobile disclosures', () => {
     await expect(page.locator('.chips--micro .chip')).toHaveCount(6);
 
     // Batch explainer behind "How the batch model works"
-    await page.locator('#s-access').scrollIntoViewIfNeeded();
+    await page.locator('#s-preorder').scrollIntoViewIfNeeded();
     await expect(page.locator('.batchbox')).toBeHidden();
     await page.locator('.expander', { hasText: 'How the batch model works' }).click();
     await expect(page.locator('.batchbox')).toContainText('not artificial scarcity');
@@ -646,7 +685,7 @@ for (const width of [375, 390, 430]) {
       expect(dots.labelHidden, 'labels collapse to dots').toBe(true);
       expect(dots.tap, 'tap target is at least 24px').toBeGreaterThanOrEqual(24);
 
-      await page.locator('#s-access').scrollIntoViewIfNeeded();
+      await page.locator('#s-contact').scrollIntoViewIfNeeded();
       await page.waitForTimeout(700);
       await page.screenshot({ path: `qa/mobile-audit-${width}.png` });
     });

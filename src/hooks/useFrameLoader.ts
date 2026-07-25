@@ -61,12 +61,15 @@ export function useFrameStore(profile: FrameProfile, enabled: boolean) {
     const info = FRAME_MANIFEST[profile];
     // Decode straight to the size the canvas will blit (cover-fit at the
     // capped DPR) so resident bitmaps stay small and blits are ~1:1.
-    // Decode sizing keeps the proven 1.5 cover (bitmaps at or slightly
-    // above the canvas backing, which is capped at 1.25): decoding to a
+    // Desktop keeps the proven 1.5 cover (bitmaps at or slightly above
+    // the desktop canvas backing, capped at 1.25): decoding to a
     // SMALLER width than the tier's native size turns on per-frame
     // resize work in the worker, which measurably starves the window on
-    // weak machines for a marginal memory win.
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // weak machines for a marginal memory win. Mobile mirrors its 3.0
+    // backing cap, which keeps the cover width above the tier's native
+    // size in every orientation — phones always decode at native
+    // resolution, feeding the high-DPI canvas the sharpest source.
+    const dpr = Math.min(window.devicePixelRatio || 1, profile === 'mobile' ? 3 : 1.5);
     const coverWidth = Math.ceil(
       Math.max(window.innerWidth, window.innerHeight * (info.width / info.height)) * dpr,
     );

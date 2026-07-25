@@ -14,8 +14,8 @@
   },
   "mobile": {
     "dir": "/frames/mobile",
-    "width": 1080,
-    "height": 608,
+    "width": 1440,
+    "height": 810,
     "count": 485
   },
   "zones": [

@@ -9,7 +9,7 @@
 # Output tiers (same global numbering, zones and feathering in each):
 #   public/frames/desktop/fNNNN.webp  1920px q90  — default
 #   public/frames/hidpi/fNNNN.webp    2560px q88  — devicePixelRatio-gated
-#   public/frames/mobile/fNNNN.webp   1080px q80  — phones
+#   public/frames/mobile/fNNNN.webp   1440px q80  — phones (high-DPI canvas)
 #   public/frames/stills/zN.webp      one still per zone
 #   public/poster.webp, public/og.jpg
 #   src/data/frame-manifest.json
@@ -21,7 +21,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 STEP=2
-declare -A TIER_W=([desktop]=1920 [hidpi]=2560 [mobile]=1080)
+declare -A TIER_W=([desktop]=1920 [hidpi]=2560 [mobile]=1440)
 declare -A TIER_Q=([desktop]=90 [hidpi]=88 [mobile]=80)
 TIERS=(desktop hidpi mobile)
 

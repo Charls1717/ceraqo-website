@@ -19,14 +19,21 @@ const PX_PER_FRAME = 14;
 const LERP = 0.24;
 
 /**
- * Canvas backing-store DPR cap, independent of the fetched image tier.
- * Committing the canvas to the compositor costs raster time in
- * proportion to backing pixels; 1.25 costs ~39%% of dpr2 and ~69%% of
- * the old 1.5 cap — the difference is invisible in motion on Retina
- * panels and directly buys scrub headroom on MacBooks. The decode
- * worker sizes bitmaps to the same cap so blits stay 1:1.
+ * Canvas backing-store DPR caps, per device class.
+ *
+ * Desktop/hidpi stay at 1.25: committing the canvas costs raster time
+ * in proportion to backing pixels, and on MacBook trackpads that
+ * headroom is exactly what keeps the scrub smooth (unchanged).
+ *
+ * Mobile uses the device's real DPR capped at 3: phones composite the
+ * whole screen at native resolution anyway, and a 1.25 backing on a
+ * dpr-3 panel meant the compositor stretched the canvas ~2.4× — the
+ * dominant source of mobile blur. drawImage scaling is GPU-backed on
+ * phones, and the adaptive blend fallback below already sheds load on
+ * devices that struggle.
  */
 const DPR_CAP = 1.25;
+const MOBILE_DPR_CAP = 3;
 
 /** Zone-local fade windows for the fact copy (fractions of the zone). */
 const FACT_WINDOWS = [
@@ -112,9 +119,14 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
       const stage = canvas.parentElement!;
       cssW = stage.clientWidth;
       cssH = stage.clientHeight;
-      dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+      dpr = Math.min(
+        window.devicePixelRatio || 1,
+        profile === 'mobile' ? MOBILE_DPR_CAP : DPR_CAP,
+      );
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
+      // Setting width/height resets 2D context state — smoothing must
+      // be re-asserted after every backing-store change.
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       needsDraw = true;
@@ -219,6 +231,11 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(canvas.parentElement!);
+    // The observer covers geometry changes; these also catch DPR flips
+    // that arrive without a stage-box change (rotation on some phones,
+    // window moved to another display).
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
 
     const io = new IntersectionObserver(
       (entries) => {
@@ -318,9 +335,11 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
       st.kill();
       io.disconnect();
       ro.disconnect();
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
       gsap.ticker.remove(tick);
     };
-  }, [storeRef, count, zoneWindows]);
+  }, [storeRef, count, zoneWindows, profile]);
 
   return (
     <section ref={trackRef} className="dive-track" style={{ height: trackHeight }} aria-label="The Q-ARMOR dive">

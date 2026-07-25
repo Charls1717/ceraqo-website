@@ -278,6 +278,52 @@ test.describe('high-DPI', () => {
     await scrubTo(page, 0.25);
     const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
     expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(3);
+
+    // Desktop-class devices keep the 1.25 backing cap — the mobile
+    // sharpness work must not creep into the trackpad-tuned path.
+    const backing = await page.evaluate(() => {
+      const c = document.querySelector<HTMLCanvasElement>('.dive-canvas')!;
+      return { w: c.width, cssW: c.clientWidth };
+    });
+    expect(backing.w).toBe(Math.round(backing.cssW * 1.25));
+  });
+});
+
+test.describe('mobile high-DPI sharpness', () => {
+  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+
+  test('canvas backing store runs at device resolution and survives rotation', async ({ page }) => {
+    await waitForStart(page);
+
+    const m = await page.evaluate(() => {
+      const c = document.querySelector<HTMLCanvasElement>('.dive-canvas')!;
+      const ctx = c.getContext('2d')!;
+      return {
+        w: c.width,
+        h: c.height,
+        cssW: c.clientWidth,
+        cssH: c.clientHeight,
+        smooth: ctx.imageSmoothingEnabled,
+        quality: ctx.imageSmoothingQuality,
+      };
+    });
+    // The requirement is >=2x; the implementation gives the true DPR up
+    // to a cap of 3, so on this dpr-3 emulation the backing is exact 3x.
+    expect(m.w).toBeGreaterThanOrEqual(m.cssW * 2);
+    expect(m.w).toBe(Math.round(m.cssW * 3));
+    expect(m.h).toBe(Math.round(m.cssH * 3));
+    expect(m.smooth, 'imageSmoothingEnabled after resize').toBe(true);
+    expect(m.quality, 'imageSmoothingQuality after resize').toBe('high');
+
+    // Rotation recalculates the backing store at the same DPR
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(500);
+    const rotated = await page.evaluate(() => {
+      const c = document.querySelector<HTMLCanvasElement>('.dive-canvas')!;
+      return { w: c.width, cssW: c.clientWidth, quality: c.getContext('2d')!.imageSmoothingQuality };
+    });
+    expect(rotated.w).toBe(Math.round(rotated.cssW * 3));
+    expect(rotated.quality, 'smoothing re-asserted after backing reset').toBe('high');
   });
 });
 

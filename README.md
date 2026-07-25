@@ -1,6 +1,6 @@
 # CERAQO — Q-ARMOR
 
-A cinematic "3D scroll" launch site for **Q-ARMOR**, CERAQO's silane-based quartz
+A cinematic "3D scroll" launch site for **Q-ARMOR**, CERAQO's newly developed quartz
 ceramic coating. Scrolling down *is* zooming in: one unbroken dive from the
 bottle on the table (1×) into the quartz lattice of the cured coating
 (1,000,000×), rendered as a scroll-scrubbed canvas frame sequence.

@@ -106,7 +106,7 @@ const COMPARE_ROWS: { label: string; q: string; pro: string }[] = [
   },
   {
     label: 'Protection window',
-    q: 'Up to 72 months*',
+    q: 'Up to 6 years*',
     pro: 'Commonly 24–60 months, tier dependent',
   },
   {
@@ -124,7 +124,7 @@ const COMPARE_ROWS: { label: string; q: string; pro: string }[] = [
 const FAQ_PRIMARY: { q: string; a: string }[] = [
   {
     q: 'What exactly is Q-ARMOR?',
-    a: 'A newly developed silane chemistry — not a wax, not another ceramic coating. It bonds with your paint and outperforms premium ceramic coatings in hardness and durability.',
+    a: 'A newly developed product — not a wax, not another ceramic coating. It bonds with your paint and outperforms premium ceramic coatings in hardness and durability.',
   },
   {
     q: 'Can I really apply it myself?',
@@ -134,14 +134,14 @@ const FAQ_PRIMARY: { q: string; a: string }[] = [
     q: 'When am I charged?',
     a: PREORDER_URL
       ? 'At checkout, the moment you place your pre-order. Your order secures your spot in Batch 001.'
-      : 'At checkout, once pre-orders open. Until then, your email holds your place in Batch 001.',
+      : 'At checkout, once pre-orders open for Batch 001.',
   },
 ];
 
 const FAQ_MORE: { q: string; a: string }[] = [
   {
     q: 'How long does the protection last?',
-    a: 'Up to 72 months, depending on preparation, environment and washing routine.',
+    a: 'Up to 6 years, depending on preparation, environment and washing routine.',
   },
   {
     q: 'How hard is the cured layer?',
@@ -239,9 +239,6 @@ function BuyButton() {
 
 export default function PostDive() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [email, setEmail] = useState('');
-  const [joined, setJoined] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [rowsOpen, setRowsOpen] = useState(startOpen);
   const [fitOpen, setFitOpen] = useState(startOpen);
   const [factorsOpen, setFactorsOpen] = useState(startOpen);
@@ -298,24 +295,6 @@ export default function PostDive() {
     return () => ctx.revert();
   }, []);
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
-    if (!ok) {
-      setError('Enter a valid email address.');
-      return;
-    }
-    setError(null);
-    try {
-      const list = JSON.parse(localStorage.getItem('ceraqo-waitlist') ?? '[]') as string[];
-      list.push(email.trim());
-      localStorage.setItem('ceraqo-waitlist', JSON.stringify(list));
-    } catch {
-      /* storage unavailable — the confirmation still stands */
-    }
-    setJoined(true);
-  };
-
   // Placeholder capture: stored in the visitor's browser only until a
   // real destination (inbox / form service) is confirmed and wired.
   const submitInquiry = (e: FormEvent) => {
@@ -354,7 +333,7 @@ export default function PostDive() {
             </p>
             <p className="prose reveal">
               Q-ARMOR changes everything. Not a reformulated wax. Not another ceramic
-              coating. A newly developed silane chemistry that becomes part of your paint —
+              coating. A newly developed product that becomes part of your paint —
               engineered to outperform premium ceramic coatings.
             </p>
             <p className="prose prose--turn reveal">
@@ -397,7 +376,7 @@ export default function PostDive() {
         </h2>
         <div className="specs2">
           <div className="specs2__data stagger">
-            <Gauge frac={1} value="72" unit="months" label="Up to 72 Months Protection*" />
+            <Gauge frac={1} value="6" unit="years" label="Up to 6 Years Protection*" />
             <Gauge frac={1} value="9H" unit="hardness" label="Up to 9H Pencil Hardness" />
           </div>
           <div className="specs2__grid stagger">
@@ -447,8 +426,8 @@ export default function PostDive() {
 
         <div className="footnote reveal">
           <p className="footnote__line">
-            Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72
-            months.<sup className="asterisk">*</sup>
+            Under suitable conditions, Q-ARMOR is designed to provide protection for up to 6
+            years.<sup className="asterisk">*</sup>
           </p>
           <div className="factors__label micro">
             * Dependent factors
@@ -542,37 +521,19 @@ export default function PostDive() {
                 Payment is taken at checkout. Your order secures your spot in Batch 001.
               </p>
             </>
-          ) : joined ? (
-            <div className="waitlist__ok" role="status">
-              You’re on the list for Batch 001. We’ll be in touch before it ships.
-            </div>
           ) : (
+            // No email capture and no live checkout yet: the button
+            // waits, disabled, for the PREORDER_URL switch. Its interim
+            // behaviour is the client's decision — not invented here.
             <>
-              <form className="waitlist__form" onSubmit={submit} noValidate>
-                <input
-                  className="waitlist__input"
-                  type="email"
-                  name="email"
-                  placeholder="you@example.com"
-                  aria-label="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <button className="waitlist__btn" type="submit">
-                  Pre-order — €169
-                </button>
-              </form>
-              <p className="waitlist__note" role={error ? 'alert' : undefined}>
-                {error ??
-                  'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.'}
+              <button type="button" className="buybtn" disabled>
+                Pre-order — €169
+              </button>
+              <p className="waitlist__note">
+                Pre-orders for Batch 001 open shortly — payment is taken at checkout.
               </p>
             </>
           )}
-          <p className="waitlist__legal">
-            Your address is used only to contact you about Batch 001 — never shared, never
-            sold. <a className="waitlist__legal-link" href="#privacy">Privacy notice</a>
-          </p>
           {!batchOpen && (
             <button type="button" className="expander" onClick={() => setBatchOpen(true)}>
               How the batch model works

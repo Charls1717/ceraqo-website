@@ -2578,3 +2578,14 @@ a.waitlist__btn {
     font-size: 0.9rem;
   }
 }
+
+/* Direct-action pre-order button waiting on the checkout switch */
+.buybtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: none;
+}
+
+.buybtn:disabled:hover {
+  background: var(--c-cyan);
+}

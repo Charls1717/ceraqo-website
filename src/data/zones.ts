@@ -45,7 +45,7 @@ export const ZONES: Zone[] = [
     id: 'lattice',
     label: 'LATTICE',
     kicker: 'The lattice',
-    fact: 'Hardness up to 9H. Effective for up to 72 months.',
+    fact: 'Hardness up to 9H. Effective for up to 6 years.',
   },
 ];
 

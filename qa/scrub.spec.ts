@@ -352,7 +352,7 @@ test('post-dive: specs, launch line and waitlist render', async ({ page }) => {
   await page.waitForTimeout(900);
   await expect(page.locator('.scard__label', { hasText: 'Up to 9H Pencil Hardness' })).toBeVisible();
   await expect(page.getByText(/One bottle\. One car\./)).toBeVisible();
-  await expect(page.locator('.preorder .waitlist__btn')).toHaveText('Pre-order — €169');
+  await expect(page.locator('.preorder .buybtn')).toHaveText('Pre-order — €169');
   await page.screenshot({ path: 'qa/post-sections.png', fullPage: false });
 });
 
@@ -454,7 +454,7 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Batch 001',
     'Numbered batches of 20,000 bottles. A new batch every two months.',
     'a production schedule, not artificial scarcity',
-    'Payment is taken at checkout once pre-orders open — your email secures your place in Batch 001.',
+    'Pre-orders for Batch 001 open shortly — payment is taken at checkout.',
     'Before You Pre-order',
     'When am I charged?',
     'Privacy notice',
@@ -464,13 +464,13 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Professional Results. Made for Everyone.',
     'Four steps. About an hour. No experience needed.',
     'That’s all — professional-grade protection has never been this accessible.',
-    'Up to 72 Months Protection*',
+    'Up to 6 Years Protection*',
     'Simple DIY Application',
     'Deep Gloss. Crystal Clear Finish.',
     'No heavy residues. No artificial shine.',
     'Easy Maintenance. Less Cleaning. More Driving.',
     'Water, dirt and oil struggle to stick.',
-    'Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72 months.*',
+    'Under suitable conditions, Q-ARMOR is designed to provide protection for up to 6 years.*',
     'One Kit. Everything Included.',
     'Everything required. Nothing extra.',
     'One kit protects up to two large vehicles.',
@@ -490,7 +490,7 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     '35–50 ml protects an entire car.',
     'Wipe on. Buff. Cures at ambient temperature.',
     'A covalent bond with the paint. It cannot flake off or be washed off.',
-    'Hardness up to 9H. Effective for up to 72 months.',
+    'Hardness up to 9H. Effective for up to 6 years.',
   ]) {
     await expect(page.locator('.overlay--zone', { hasText: fact })).toHaveCount(1);
   }
@@ -524,9 +524,8 @@ test('inline buy CTA: consistent label everywhere, glides to the pre-order block
   // CTA is the pre-order form's submit button. Every buy control
   // carries the identical label.
   const buys = page.locator('.buybtn');
-  await expect(buys).toHaveCount(1);
-  await expect(buys.first()).toHaveText('Pre-order — €169');
-  await expect(page.locator('.preorder .waitlist__btn')).toHaveText('Pre-order — €169');
+  await expect(buys).toHaveCount(2); // end of Proof + the (disabled) block button
+  for (let i = 0; i < 2; i++) await expect(buys.nth(i)).toHaveText('Pre-order — €169');
   await buys.first().scrollIntoViewIfNeeded();
   await buys.first().click();
   await page.waitForTimeout(2200);
@@ -538,12 +537,15 @@ test('inline buy CTA: consistent label everywhere, glides to the pre-order block
   expect(inView, 'buy button glides to the pre-order block').toBe(true);
 });
 
-test('waitlist mechanics still work (now in the value section)', async ({ page }) => {
+test('pre-order block: no email capture, direct-action button waits on checkout', async ({ page }) => {
   await waitForStart(page);
-  await page.locator('.waitlist__input').scrollIntoViewIfNeeded();
-  await page.locator('.waitlist__input').fill('driver@example.com');
-  await page.locator('.preorder .waitlist__btn').click();
-  await expect(page.locator('.waitlist__ok')).toContainText('You’re on the list for Batch 001.');
+  await page.locator('#s-preorder').scrollIntoViewIfNeeded();
+  // No input of any kind inside the consumer pre-order block
+  await expect(page.locator('#s-preorder input, #s-preorder textarea')).toHaveCount(0);
+  const btn = page.locator('.preorder .buybtn');
+  await expect(btn).toHaveText('Pre-order — €169');
+  await expect(btn).toBeDisabled();
+  await expect(page.locator('.preorder .waitlist__note')).toContainText('payment is taken at checkout');
 });
 
 test('partnership form: validates, submits, confirms', async ({ page }) => {
@@ -580,10 +582,8 @@ test('faq: every question opens and answers carry no new claims markers', async 
   }
 });
 
-test('privacy: form links to the notice and the notice exists', async ({ page }) => {
+test('privacy: notice exists and the footer links to it', async ({ page }) => {
   await waitForStart(page);
-  await page.locator('.waitlist__legal-link').scrollIntoViewIfNeeded();
-  await expect(page.locator('.waitlist__legal-link')).toHaveAttribute('href', '#privacy');
   await expect(page.locator('#privacy .legal__text')).toContainText('never sold or shared');
   await expect(page.locator('.footer__link')).toHaveAttribute('href', '#privacy');
 });
@@ -660,18 +660,17 @@ for (const width of [375, 390, 430]) {
       });
       expect(gaugeFits, 'gauge unit text fits its card').toBe(true);
 
-      // Floating CTA must not cover the pre-order form controls
-      await page.locator('.waitlist__form').scrollIntoViewIfNeeded();
+      // Floating CTA must not cover the buy button or the inquiry submit
+      await page.locator('.preorder .buybtn').scrollIntoViewIfNeeded();
       await page.waitForTimeout(600);
       const clear = await page.evaluate(() => {
         const cta = document.querySelector('.cta__btn')!.getBoundingClientRect();
         const overlaps = (r: DOMRect) =>
           cta.left < r.right && cta.right > r.left && cta.top < r.bottom && cta.bottom > r.top;
-        const form = document.querySelector('.waitlist__form')!.getBoundingClientRect();
-        const legal = document.querySelector('.waitlist__legal')!.getBoundingClientRect();
-        return !overlaps(form) && !overlaps(legal);
+        const buy = document.querySelector('.preorder .buybtn')!.getBoundingClientRect();
+        return !overlaps(buy);
       });
-      expect(clear, 'floating CTA does not cover the form or its legal line').toBe(true);
+      expect(clear, 'floating CTA does not cover the pre-order button').toBe(true);
 
       // The dot rail replaces the labelled pagenav below 1080px
       await page.locator('#s-specs').scrollIntoViewIfNeeded();

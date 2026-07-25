@@ -113,35 +113,25 @@
 /* Dive track + stage                                                  */
 /* ------------------------------------------------------------------ */
 
-.dive {
+.dive-track {
   position: relative;
-  height: 100vh;
-  height: 100svh;
 }
 
 .dive-stage {
-  position: absolute;
-  inset: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
   overflow: hidden;
   background: var(--c-stage);
 }
 
-/* Stills + transition videos share one cover-fit stack; the state
-   machine drives opacity/z-index inline. The wrapper's own z-index
-   keeps every media layer beneath the grade/grain/HUD chrome. */
-.dive-media-stack {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-.dive-media {
+.dive-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  opacity: 0;
+  z-index: 1;
 }
 
 /* Depth grade: graphite at the surface, pure black at depth */

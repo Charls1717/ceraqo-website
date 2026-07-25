@@ -7,26 +7,22 @@ import Intro from './components/Intro';
 import Dive from './components/Dive';
 import Preloader from './components/Preloader';
 import PostDive from './components/PostDive';
-import { useDivePreload, type DiveTier } from './hooks/useDivePreload';
+import { useFrameStore, type FrameProfile } from './hooks/useFrameLoader';
 import './styles/site.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
-  // Pick the asset tier once per load: phones get the lighter videos;
-  // displays that would show more than ~1920 physical pixels get the
-  // 2560-wide rest stills (the videos stay 1080p — they only run in
-  // motion, where upscaled video reads clean).
-  const tier = useMemo<DiveTier>(
-    () => (window.matchMedia('(max-width: 820px)').matches ? 'mobile' : 'desktop'),
-    [],
-  );
-  const hidpiRests = useMemo(() => {
-    if (window.matchMedia('(max-width: 820px)').matches) return false;
-    return (window.devicePixelRatio || 1) * window.innerWidth > 1920;
+  // Pick the frame set once per load: phones get the lighter set, and
+  // displays that would show more than ~1920 physical pixels of frame
+  // (retina laptops, 4K monitors) get the high-DPI tier.
+  const profile = useMemo<FrameProfile>(() => {
+    if (window.matchMedia('(max-width: 820px)').matches) return 'mobile';
+    const physical = (window.devicePixelRatio || 1) * window.innerWidth;
+    return physical > 1920 ? 'hidpi' : 'desktop';
   }, []);
 
-  const { assets, progress, ready } = useDivePreload(tier, hidpiRests);
+  const { storeRef, progress, ready } = useFrameStore(profile, true);
   const [started, setStarted] = useState(false);
   const diag = useMemo(() => new URLSearchParams(window.location.search).has('diag'), []);
 
@@ -46,9 +42,8 @@ export default function App() {
     };
   }, []);
 
-  // The loader's percentage is bound to exactly the bytes that gate
-  // this flip, so the moment it reads 100% the page starts — the only
-  // thing between the two is the loader's own fade-out.
+  // Release the scroll the moment the opening frames are decoded — the
+  // loader's percentage and this flip share one condition.
   useEffect(() => {
     if (!ready || started) return;
     setStarted(true);
@@ -57,8 +52,8 @@ export default function App() {
     ScrollTrigger.refresh();
   }, [ready, started]);
 
-  // Failsafe: never leave the page scroll-locked on a wedged fetch —
-  // every consumer falls back to streaming network URLs.
+  // Failsafe: the page must never stay scroll-locked, even if the frame
+  // preload wedges on a flaky connection.
   useEffect(() => {
     if (started) return;
     const t = window.setTimeout(() => {
@@ -73,25 +68,23 @@ export default function App() {
   return (
     <>
       <Preloader progress={progress} done={started} />
-      <Hero assets={assets} on={started} />
+      <Hero on={started} />
       <Intro />
-      <Dive assets={assets} active={started} />
+      <Dive storeRef={storeRef} profile={profile} active={started} />
       <PostDive />
-      {diag && <Diag tier={tier} progress={progress} ready={ready} started={started} />}
+      {diag && <Diag profile={profile} progress={progress} ready={ready} started={started} />}
     </>
   );
 }
 
 /** Tiny on-page readout for remote debugging: append ?diag to the URL. */
-function Diag(props: { tier: string; progress: number; ready: boolean; started: boolean }) {
+function Diag(props: { profile: string; progress: number; ready: boolean; started: boolean }) {
   const [line, setLine] = useState('');
   useEffect(() => {
     const read = () => {
-      const d = window.__diveState;
+      const s = window.__frameLoadState;
       setLine(
-        `scrollY ${Math.round(window.scrollY)} · state ${d?.state ?? '-'} ${d?.mode ?? ''}${
-          d?.captured ? ' · captured' : ''
-        }`,
+        `scrollY ${Math.round(window.scrollY)} · frames ${s ? `${s.loaded}/${s.total}` : '-'}`,
       );
     };
     const i = window.setInterval(read, 300);
@@ -112,8 +105,8 @@ function Diag(props: { tier: string; progress: number; ready: boolean; started: 
         maxWidth: '90vw',
       }}
     >
-      tier {props.tier} · load {Math.round(props.progress * 100)}% · ready {String(props.ready)} ·
-      started {String(props.started)}
+      profile {props.profile} · load {Math.round(props.progress * 100)}% · ready{' '}
+      {String(props.ready)} · started {String(props.started)}
       <br />
       {line}
     </div>

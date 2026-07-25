@@ -51,11 +51,12 @@ await browser.startTracing(page, {
 // Direction reversals are embedded at full motion (the churn trigger).
 await page.evaluate(async () => {
   const t = document.querySelector('.dive-track');
-  const max = t.offsetTop + t.offsetHeight - innerHeight;
+  const top = t.getBoundingClientRect().top + scrollY;
+  const span = t.offsetHeight - innerHeight;
   const lenis = window.__lenis;
   const go = (p, dur) =>
     new Promise((res) => {
-      lenis.scrollTo(Math.round(p * max), { duration: dur, easing: (x) => x });
+      lenis.scrollTo(Math.round(top + p * span), { duration: dur, easing: (x) => x });
       setTimeout(res, dur * 1000);
     });
   // White corner marker frames delimit the active-scrub window for the

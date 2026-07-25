@@ -1,576 +1,314 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import gsap from 'gsap';
-import type Lenis from 'lenis';
-import { ZONES, formatMagnification } from '../data/zones';
-import type { DiveAssets } from '../hooks/useDivePreload';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ZONES, magnificationAt, formatMagnification } from '../data/zones';
+import { FRAME_MANIFEST, type FrameProfile } from '../hooks/useFrameLoader';
+import type { FrameStore } from '../lib/frameStore';
+
+gsap.registerPlugin(ScrollTrigger);
+
+/** Scroll distance dedicated to each frame of the sequence. */
+const PX_PER_FRAME = 22;
+
+/** Per-tick catch-up factor for the smoothed frame cursor. */
+const LERP = 0.24;
 
 /**
- * The snap dive. Five rest states (OBJECT, DROP, SPREAD, BOND, LATTICE),
- * each a static still. One scroll/swipe step forward plays one native
- * <video> transition once, hardware-decoded, and lands on the next rest.
- * One step backward cross-fades to the previous rest. A final step down
- * from LATTICE plays the exit clip (the pull-back out of the crystal,
- * full circle to the bottle) and releases the page into the content
- * below. There is no scroll-position-to-frame mapping anywhere.
+ * Canvas backing-store DPR cap, independent of the fetched image tier.
+ * Committing the canvas to the compositor costs main-thread time in
+ * proportion to backing pixels (profiled: ~300ms/commit at dpr2 under
+ * 4x throttle without GPU); 1.5 keeps retina crispness at ~half the
+ * commit cost of dpr2 and ~a quarter of dpr3 phones.
  */
+const DPR_CAP = 1.5;
 
-/** decades of magnification per forward step: 1x -> 1,000,000x over 4 */
-const EXP_STEP = 1.5;
-const REST_MAX = 4;
-/** video index of the exit clip (LATTICE -> release) */
-const EXIT = 4;
-const BACK_FADE_S = 0.45;
-const VIDEO_FADE_S = 0.2;
-/** wheel delta that counts as one deliberate step */
-const WHEEL_STEP = 70;
-/** quiet time that separates two wheel gestures */
-const WHEEL_GESTURE_GAP_MS = 320;
-const TOUCH_STEP_PX = 52;
-
-type Mode = 'rest' | 'video' | 'fade';
+/** Zone-local fade windows for the fact copy (fractions of the zone). */
+const FACT_WINDOWS = [
+  { in0: 0.3, in1: 0.42, out0: 0.78, out1: 0.92 }, // object — after the hero clears
+  { in0: 0.14, in1: 0.26, out0: 0.78, out1: 0.92 }, // drop
+  { in0: 0.14, in1: 0.26, out0: 0.78, out1: 0.92 }, // spread
+  { in0: 0.14, in1: 0.26, out0: 0.78, out1: 0.92 }, // bond
+  { in0: 0.08, in1: 0.18, out0: 0.46, out1: 0.6 }, // lattice — over the locked crystal
+];
 
 interface DiveProps {
-  assets: DiveAssets;
-  /** true once the preloader is done — arms capture and the HUD */
+  storeRef: RefObject<FrameStore | null>;
+  profile: FrameProfile;
+  /** true once the preloader has finished — switches the HUD on */
   active: boolean;
 }
 
-const getLenis = () => (window as unknown as { __lenis?: Lenis }).__lenis;
+export default function Dive({ storeRef, profile, active }: DiveProps) {
+  const info = FRAME_MANIFEST[profile];
+  const zones = FRAME_MANIFEST.zones;
+  const count = info.count;
 
-export default function Dive({ assets, active }: DiveProps) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const imgARef = useRef<HTMLImageElement>(null);
-  const imgBRef = useRef<HTMLImageElement>(null);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const trackRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
   const magRef = useRef<HTMLDivElement>(null);
   const depthRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
   const zoneItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const overlayRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const activeRef = useRef(active);
-  activeRef.current = active;
+
+  const trackHeight = useMemo(
+    () => `calc(${Math.max(count * PX_PER_FRAME, 4800)}px + 100vh)`,
+    [count],
+  );
+
+  /** Glide the page so the scrub lands a beat into the given zone. */
+  const jumpToZone = (zoneIndex: number) => {
+    const track = trackRef.current;
+    if (!track || count === 0) return;
+    const z = zones[zoneIndex];
+    const targetFrame = Math.min(z.start + 12, z.end);
+    const p = targetFrame / Math.max(count - 1, 1);
+    // The track no longer starts at the page top (hero + intro precede
+    // it): map progress onto the track's own scroll span.
+    const top = track.getBoundingClientRect().top + window.scrollY;
+    const span = track.offsetHeight - window.innerHeight;
+    const lenis = (
+      window as unknown as {
+        __lenis?: { scrollTo: (t: number, o?: object) => void };
+      }
+    ).__lenis;
+    const target = Math.round(top + p * span);
+    if (lenis) lenis.scrollTo(target, { duration: 2.6 });
+    else window.scrollTo(0, target);
+  };
+
+  /** Zone frame ranges normalised to overall progress [0, 1]. */
+  const zoneWindows = useMemo(() => {
+    const denom = Math.max(count - 1, 1);
+    return zones.map((z) => ({
+      from: z.start / denom,
+      to: z.end / denom,
+    }));
+  }, [zones, count]);
 
   useEffect(() => {
-    const section = sectionRef.current;
-    const imgA = imgARef.current;
-    const imgB = imgBRef.current;
-    if (!section || !imgA || !imgB) return;
-    const videos = videoRefs.current.filter((v): v is HTMLVideoElement => v !== null);
-    if (videos.length !== 5) return;
+    const track = trackRef.current;
+    const canvas = canvasRef.current;
+    if (!track || !canvas || count === 0) return;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // alpha:false — the stage is opaque, and an opaque canvas composites
+    // without a blend pass.
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) return;
 
-    // ---- state ----------------------------------------------------
-    let state = 0;
-    let mode: Mode = 'rest';
-    let captured = false;
-    let queued = false;
-    let currentVideo = -1;
-    let frontImg = imgA;
-    let backImg = imgB;
-    let cooldownUntil = 0;
-    let watchdog = 0;
-    let disposed = false;
-    /** the exit clip's final bottle frame is on screen (post-release) */
-    let exitShown = false;
+    let cssW = 0;
+    let cssH = 0;
+    let dpr = 1;
 
-    const publish = () => {
-      window.__diveState = { state, mode, captured, queued };
+    const resize = () => {
+      const stage = canvas.parentElement!;
+      cssW = stage.clientWidth;
+      cssH = stage.clientHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      needsDraw = true;
     };
-    publish();
 
-    // ---- HUD ------------------------------------------------------
-    const hud = { exp: 0 };
-    let hudFrom = 0;
-    let hudTo = 0;
+    // The scroll drives a fractional frame cursor; the canvas cross-fades
+    // between the two adjacent frames and eases toward the target, so
+    // motion stays continuous at any scroll speed instead of stepping
+    // from frame to frame.
+    let targetF = 0;
+    let displayF = 0;
+    let targetIndex = 0;
+    let needsDraw = true;
+    let inView = true;
+    let drawnExact = false;
+
+    const coverDraw = (bmp: ImageBitmap, alpha: number) => {
+      const iw = bmp.width;
+      const ih = bmp.height;
+      if (!iw || !ih) return;
+      const scale = Math.max(cssW / iw, cssH / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(bmp, (cssW - dw) / 2, (cssH - dh) / 2, dw, dh);
+    };
+
+    // Draws only worker-decoded ImageBitmaps from the sliding window —
+    // never anything that would trigger a synchronous decode.
+    const draw = (blend: boolean) => {
+      if (cssW === 0 || cssH === 0) return;
+      const store = storeRef.current;
+      if (!store) return;
+      const i0 = blend ? Math.floor(displayF) : Math.round(displayF);
+      const i1 = Math.min(i0 + 1, count - 1);
+      const frac = displayF - i0;
+      const exact = store.get(i0);
+      const a = exact ?? store.nearest(i0);
+      if (!a) return;
+      drawnExact = !!exact;
+      const ds = (window.__diveStats ??= { draws: 0, fallbackDraws: 0 });
+      ds.draws++;
+      if (!exact) ds.fallbackDraws++;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, cssH);
+      coverDraw(a, 1);
+      if (blend && frac > 0.01 && i1 !== i0) {
+        const b = store.get(i1);
+        if (b) coverDraw(b, frac);
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    // Adaptive quality: the cross-fade costs a second full-frame blit,
+    // which weak GPUs / software rasterizers can't spare. Watch the real
+    // tick interval and fall back to single-frame drawing when the
+    // machine is struggling (with hysteresis so it doesn't flap).
+    let blendOn = true;
+    let emaInterval = 16.7;
+    let lastDrawnF = -1;
+
+    const tick = (_t: number, deltaTime: number) => {
+      if (deltaTime > 0 && deltaTime < 120) {
+        emaInterval = emaInterval * 0.92 + deltaTime * 0.08;
+        if (blendOn && emaInterval > 26) blendOn = false;
+        else if (!blendOn && emaInterval < 17.5) blendOn = true;
+      }
+      if (!inView) return;
+      const diff = targetF - displayF;
+      if (Math.abs(diff) > 0.0015) {
+        displayF += diff * LERP;
+        if (Math.abs(targetF - displayF) < 0.0015) displayF = targetF;
+        needsDraw = true;
+      }
+      // A fallback neighbour was shown and the real bitmap has since
+      // arrived from the worker — repaint with the exact frame.
+      if (!needsDraw && !drawnExact && storeRef.current?.get(Math.round(displayF))) {
+        needsDraw = true;
+      }
+      // Skip only true sub-pixel repaints of a frame we already show —
+      // never suppress catch-up (the old >40ms limiter did, and reads as
+      // a freeze-then-snap on screen).
+      if (needsDraw && drawnExact && Math.abs(displayF - lastDrawnF) < 0.02) {
+        needsDraw = false;
+      }
+      if (needsDraw) {
+        needsDraw = false;
+        lastDrawnF = displayF;
+        draw(blendOn);
+      }
+    };
+    gsap.ticker.add(tick);
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas.parentElement!);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        inView = entries[0]?.isIntersecting ?? true;
+      },
+      { rootMargin: '80px 0px' },
+    );
+    io.observe(track);
+
+    // --- HUD + overlay driving -------------------------------------
+    const setOverlay = (el: HTMLElement | null, opacity: number, shift: number) => {
+      if (!el) return;
+      const o = Math.min(1, Math.max(0, opacity));
+      el.style.opacity = o.toFixed(3);
+      const centred =
+        el.classList.contains('overlay--zone') || el.classList.contains('overlay--hero');
+      el.style.transform = centred
+        ? `translateY(calc(-50% + ${shift.toFixed(1)}px))`
+        : `translateY(${shift.toFixed(1)}px)`;
+      el.style.visibility = o <= 0.001 ? 'hidden' : 'visible';
+    };
+
+    let lastZone = -1;
     let lastMagText = '';
-    const renderHud = () => {
-      const magText = formatMagnification(Math.pow(10, hud.exp));
+    let prevIndex = 0;
+
+    const update = (p: number) => {
+      targetF = p * (count - 1);
+      targetIndex = Math.round(targetF);
+      if (targetIndex !== prevIndex) {
+        // Aim the worker's decode window at the new position
+        storeRef.current?.request(targetIndex, targetIndex > prevIndex ? 1 : -1);
+        prevIndex = targetIndex;
+      }
+
+      // Magnification counter
+      const magText = formatMagnification(magnificationAt(p));
       if (magText !== lastMagText && magRef.current) {
         magRef.current.textContent = magText;
         lastMagText = magText;
       }
       if (depthRef.current) {
-        depthRef.current.textContent = `DEPTH ${((hud.exp / 6) * 1.2).toFixed(2)} µm`;
+        depthRef.current.textContent = `DEPTH ${(p * 1.2).toFixed(2)} µm`;
       }
-    };
-    renderHud();
 
-    const hudTick = () => {
-      if (mode !== 'video' || currentVideo < 0) return;
-      const v = videos[currentVideo];
-      const d = v.duration || assets.duration(currentVideo);
-      if (!d || Number.isNaN(d)) return;
-      const frac = Math.min(1, Math.max(0, v.currentTime / d));
-      hud.exp = hudFrom + (hudTo - hudFrom) * frac;
-      renderHud();
-    };
-    gsap.ticker.add(hudTick);
-
-    // ---- overlays -------------------------------------------------
-    const showOverlay = (i: number) => {
-      const el = overlayRefs.current[i];
-      if (!el) return;
-      gsap.killTweensOf(el);
-      gsap.fromTo(
-        el,
-        { opacity: 0, y: 14, visibility: 'visible' },
-        { opacity: 1, y: 0, duration: 0.55, delay: 0.22, ease: 'power2.out' },
-      );
-    };
-    const hideOverlay = (i: number) => {
-      const el = overlayRefs.current[i];
-      if (!el) return;
-      gsap.killTweensOf(el);
-      gsap.to(el, {
-        opacity: 0,
-        duration: 0.24,
-        ease: 'power1.in',
-        onComplete: () => gsap.set(el, { visibility: 'hidden' }),
-      });
-    };
-    const setHint = (on: boolean) => {
-      const el = hintRef.current;
-      if (!el) return;
-      gsap.killTweensOf(el);
-      gsap.to(el, { opacity: on ? 1 : 0, duration: 0.35, delay: on ? 0.5 : 0 });
-    };
-    const setRail = () => {
-      zoneItemRefs.current.forEach((el, i) => {
-        el?.setAttribute('data-active', i === state ? 'true' : 'false');
-      });
-    };
-
-    // ---- media layers --------------------------------------------
-    const hideOtherVideos = (keep: number) => {
-      videos.forEach((v, i) => {
-        if (i !== keep) {
-          gsap.set(v, { opacity: 0, zIndex: 2 });
-          if (!v.paused) v.pause();
-        }
-      });
-    };
-
-    const arrive = (j: number) => {
-      window.clearTimeout(watchdog);
-      const from = state;
-      state = j;
-      mode = 'rest';
-      currentVideo = -1;
-      hud.exp = EXP_STEP * j;
-      renderHud();
-      // Prime the still underneath the frozen final video frame — it is
-      // pixel-matched to the frame the next transition starts from.
-      frontImg.src = assets.restSrc(j);
-      gsap.set(frontImg, { opacity: 1, zIndex: 1 });
-      if (from !== j) hideOverlay(from);
-      showOverlay(j);
-      setHint(true);
-      setRail();
-      publish();
-      if (queued && state < REST_MAX) {
-        queued = false;
-        window.setTimeout(() => {
-          if (!disposed && captured && mode === 'rest') step(1);
-        }, 260);
-      } else {
-        queued = false;
-        publish();
+      // Active zone on the rail
+      let zi = 0;
+      for (let i = 0; i < zoneWindows.length; i++) {
+        if (p >= zoneWindows[i].from) zi = i;
       }
-    };
-
-    /** Fallback arrival for when a video refuses to play (rare). */
-    const arriveByFade = (j: number) => {
-      window.clearTimeout(watchdog);
-      mode = 'rest';
-      currentVideo = -1;
-      fadeToState(j, BACK_FADE_S);
-    };
-
-    const playForward = (k: number) => {
-      const v = videos[k];
-      mode = 'video';
-      currentVideo = k;
-      exitShown = false;
-      hudFrom = k === EXIT ? 6 : EXP_STEP * k;
-      hudTo = k === EXIT ? 0 : EXP_STEP * (k + 1);
-      hideOverlay(state);
-      setHint(false);
-      publish();
-
-      const src = assets.videoSrc(k);
-      if (v.dataset.src !== src) {
-        v.preload = 'auto';
-        v.src = src;
-        v.dataset.src = src;
-        v.load();
-      }
-      try {
-        v.currentTime = 0;
-      } catch {
-        /* metadata not there yet — it starts at 0 anyway */
-      }
-      v.addEventListener(
-        'playing',
-        () => {
-          if (disposed || currentVideo !== k) return;
-          gsap.set(v, { zIndex: 3, visibility: 'visible' });
-          gsap.to(v, {
-            opacity: 1,
-            duration: VIDEO_FADE_S,
-            ease: 'none',
-            onComplete: () => {
-              if (disposed || currentVideo !== k) return;
-              hideOtherVideos(k);
-              gsap.set(v, { zIndex: 2 });
-            },
-          });
-        },
-        { once: true },
-      );
-      const played = v.play();
-      played?.catch(() => {
-        if (!disposed && currentVideo === k) {
-          if (k === EXIT) exitComplete();
-          else arriveByFade(k + 1);
-        }
-      });
-      window.clearTimeout(watchdog);
-      watchdog = window.setTimeout(
-        () => {
-          if (!disposed && mode === 'video' && currentVideo === k) {
-            if (k === EXIT) exitComplete();
-            else arriveByFade(k + 1);
-          }
-        },
-        (assets.duration(k) + 10) * 1000,
-      );
-    };
-
-    const fadeToState = (j: number, dur: number) => {
-      mode = 'fade';
-      const from = state;
-      hideOverlay(from);
-      setHint(false);
-      publish();
-      backImg.src = assets.restSrc(j);
-      const go = () => {
-        if (disposed) return;
-        gsap.set(backImg, { zIndex: 4, opacity: 0, visibility: 'visible' });
-        gsap.to(hud, {
-          exp: EXP_STEP * j,
-          duration: dur,
-          ease: 'power1.inOut',
-          onUpdate: renderHud,
+      if (zi !== lastZone) {
+        zoneItemRefs.current.forEach((el, i) => {
+          el?.setAttribute('data-active', i === zi ? 'true' : 'false');
         });
-        gsap.to(backImg, {
-          opacity: 1,
-          duration: dur,
-          ease: 'power1.inOut',
-          onComplete: () => {
-            if (disposed) return;
-            hideOtherVideos(-1);
-            gsap.set(frontImg, { opacity: 0, zIndex: 1 });
-            gsap.set(backImg, { zIndex: 1 });
-            const tmp = frontImg;
-            frontImg = backImg;
-            backImg = tmp;
-            state = j;
-            mode = 'rest';
-            hud.exp = EXP_STEP * j;
-            renderHud();
-            showOverlay(j);
-            setHint(true);
-            setRail();
-            publish();
-          },
-        });
-      };
-      backImg.decode().then(go, go);
-    };
-
-    // ---- capture / release ---------------------------------------
-    const sectionTop = () => section.getBoundingClientRect().top + window.scrollY;
-
-    const release = (dir: 1 | -1) => {
-      captured = false;
-      publish();
-      detachInput();
-      const lenis = getLenis();
-      const top = sectionTop();
-      const vh = window.innerHeight;
-      cooldownUntil = performance.now() + 1400;
-      lenis?.start();
-      const target = dir > 0 ? top + vh * 0.998 : Math.max(0, top - vh * 0.92);
-      lenis?.scrollTo(target, { duration: 1.15, lock: true });
-    };
-
-    const exitComplete = () => {
-      window.clearTimeout(watchdog);
-      mode = 'rest';
-      currentVideo = -1;
-      queued = false;
-      exitShown = true;
-      hud.exp = 0;
-      renderHud();
-      publish();
-      release(1);
-    };
-
-    const step = (dir: 1 | -1) => {
-      if (mode === 'video') {
-        if (dir > 0 && currentVideo < EXIT) queued = true;
-        publish();
-        return;
+        lastZone = zi;
       }
-      if (mode === 'fade') return;
-      if (dir > 0) {
-        if (state >= REST_MAX) {
-          // The exit shot: out of the lattice, full circle to the
-          // bottle, then the page continues.
-          if (reduceMotion) exitComplete();
-          else playForward(EXIT);
-          return;
+
+      // Scroll hint: hold at the very top of the dive, gone by ~4.5%
+      const hintOpacity = 1 - p / 0.045;
+      setOverlay(hintRef.current, hintOpacity, 0);
+
+      // Zone facts: fade in after the zone starts, out before it ends.
+      // Windows are tuned per zone so copy always sits over a settled,
+      // legible moment of the film: zone 1 yields to the hero headline,
+      // zone 5 speaks over the locked lattice and leaves before the
+      // fast pull-back out of the surface.
+      overlayRefs.current.forEach((el, i) => {
+        const w = zoneWindows[i];
+        if (!el || !w) return;
+        const span = Math.max(w.to - w.from, 0.0001);
+        const t = (p - w.from) / span;
+        const win = FACT_WINDOWS[i] ?? FACT_WINDOWS[1];
+        let o = 0;
+        if (t >= win.in0 && t <= win.out1) {
+          if (t < win.in1) o = (t - win.in0) / (win.in1 - win.in0);
+          else if (t > win.out0) o = 1 - (t - win.out0) / (win.out1 - win.out0);
+          else o = 1;
         }
-        if (reduceMotion) fadeToState(state + 1, BACK_FADE_S);
-        else playForward(state);
-      } else {
-        if (state <= 0) {
-          release(-1);
-          return;
-        }
-        fadeToState(state - 1, BACK_FADE_S);
-      }
+        const shift = (1 - Math.min(1, Math.max(0, (t - win.in0) / (win.out1 - win.in0)))) * 26 - 8;
+        setOverlay(el, o, shift);
+      });
     };
 
-    // ---- input ----------------------------------------------------
-    let wheelArmed = true;
-    let wheelAccum = 0;
-    let lastWheelT = 0;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const now = performance.now();
-      const dy =
-        e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
-      if (mode !== 'rest') {
-        lastWheelT = now;
-        wheelArmed = false;
-        if (dy > 0) step(1); // records the queued step
-        return;
-      }
-      if (!wheelArmed) {
-        // Trailing momentum from the gesture that triggered the last
-        // step — swallow it until the input goes quiet.
-        if (now - lastWheelT <= WHEEL_GESTURE_GAP_MS) {
-          lastWheelT = now;
-          return;
-        }
-        wheelArmed = true;
-        wheelAccum = 0;
-      }
-      if ((dy > 0 && wheelAccum < 0) || (dy < 0 && wheelAccum > 0)) wheelAccum = 0;
-      if (now - lastWheelT > WHEEL_GESTURE_GAP_MS) wheelAccum = 0;
-      lastWheelT = now;
-      wheelAccum += dy;
-      if (Math.abs(wheelAccum) >= WHEEL_STEP) {
-        const dir: 1 | -1 = wheelAccum > 0 ? 1 : -1;
-        wheelAccum = 0;
-        wheelArmed = false;
-        step(dir);
-      }
-    };
-
-    let touchStartY: number | null = null;
-    let touchUsed = false;
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0]?.clientY ?? null;
-      touchUsed = false;
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      if (touchStartY === null || touchUsed) return;
-      const y = e.touches[0]?.clientY ?? touchStartY;
-      const dy = touchStartY - y;
-      if (Math.abs(dy) >= TOUCH_STEP_PX) {
-        touchUsed = true;
-        step(dy > 0 ? 1 : -1);
-      }
-    };
-    const onTouchEnd = () => {
-      touchStartY = null;
-      touchUsed = false;
-    };
-
-    let lastKeyT = 0;
-    const onKey = (e: KeyboardEvent) => {
-      const down = ['ArrowDown', 'PageDown', ' '].includes(e.key);
-      const up = ['ArrowUp', 'PageUp'].includes(e.key);
-      if (!down && !up) return;
-      e.preventDefault();
-      const now = performance.now();
-      if (now - lastKeyT < 380) return;
-      lastKeyT = now;
-      step(down ? 1 : -1);
-    };
-
-    const attachInput = () => {
-      window.addEventListener('wheel', onWheel, { passive: false });
-      window.addEventListener('touchstart', onTouchStart, { passive: true });
-      window.addEventListener('touchmove', onTouchMove, { passive: false });
-      window.addEventListener('touchend', onTouchEnd, { passive: true });
-      window.addEventListener('keydown', onKey);
-    };
-    const detachInput = () => {
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('keydown', onKey);
-    };
-
-    const capture = () => {
-      if (captured || disposed) return;
-      captured = true;
-      publish();
-      const lenis = getLenis();
-      lenis?.stop();
-      lenis?.scrollTo(sectionTop(), { duration: 0.4, force: true, lock: true });
-      attachInput();
-      wheelArmed = false; // swallow the gesture that carried us in
-      lastWheelT = performance.now();
-      if (exitShown) {
-        // Re-entering from below: the exit clip's bottle frame is up —
-        // restore the LATTICE rest it releases from.
-        exitShown = false;
-        fadeToState(REST_MAX, 0.55);
-      } else {
-        setHint(true);
-      }
-    };
-
-    // A section-fill check: the dive owns the viewport when its box
-    // covers the middle band of the screen.
-    const inZone = () => {
-      const r = section.getBoundingClientRect();
-      const vh = window.innerHeight;
-      return r.top < vh * 0.45 && r.bottom > vh * 0.55;
-    };
-
-    const maybeCapture = (velocity: number) => {
-      if (captured || disposed || !activeRef.current) return;
-      if (performance.now() < cooldownUntil) return;
-      if (Math.abs(velocity) > 90) return; // let deliberate flings pass
-      if (inZone()) capture();
-    };
-
-    const onLenisScroll = (e: { velocity: number }) => maybeCapture(e.velocity);
-    // Child effects run before App's Lenis effect on mount — bind on the
-    // next frame(s), once the instance exists.
-    let boundLenis: Lenis | undefined;
-    const bindLenis = () => {
-      if (disposed) return;
-      boundLenis = getLenis();
-      if (boundLenis) boundLenis.on('scroll', onLenisScroll);
-      else requestAnimationFrame(bindLenis);
-    };
-    bindLenis();
-
-    // Input that begins inside the zone captures immediately, so a
-    // visitor who parked the dive mid-screen is picked up on their
-    // first wheel tick / touch instead of scrolling past it.
-    const onAnyWheel = (e: WheelEvent) => {
-      if (!captured && activeRef.current && performance.now() >= cooldownUntil && inZone()) {
-        capture();
-        e.preventDefault();
-      }
-    };
-    const onAnyTouchStart = () => {
-      if (!captured && activeRef.current && performance.now() >= cooldownUntil && inZone()) {
-        capture();
-      }
-    };
-    window.addEventListener('wheel', onAnyWheel, { passive: false });
-    window.addEventListener('touchstart', onAnyTouchStart, { passive: true });
-
-    const onResize = () => {
-      if (captured) {
-        getLenis()?.scrollTo(sectionTop(), { immediate: true, force: true });
-      }
-    };
-    window.addEventListener('resize', onResize);
-
-    // ---- video ended wiring --------------------------------------
-    const endedHandlers = videos.map((v, k) => {
-      const h = () => {
-        if (disposed || mode !== 'video' || currentVideo !== k) return;
-        if (k === EXIT) exitComplete();
-        else arrive(k + 1);
-      };
-      v.addEventListener('ended', h);
-      return h;
+    const st = ScrollTrigger.create({
+      trigger: track,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: true,
+      onUpdate: (self) => update(self.progress),
     });
 
-    // ---- rail -----------------------------------------------------
-    const railJump = (i: number) => {
-      if (!activeRef.current || mode !== 'rest' || i === state) return;
-      if (!captured) capture();
-      fadeToState(i, 0.55);
-    };
-    (section as HTMLElement & { __railJump?: (i: number) => void }).__railJump = railJump;
+    update(0);
 
     return () => {
-      disposed = true;
-      window.clearTimeout(watchdog);
-      detachInput();
-      window.removeEventListener('wheel', onAnyWheel);
-      window.removeEventListener('touchstart', onAnyTouchStart);
-      window.removeEventListener('resize', onResize);
-      boundLenis?.off('scroll', onLenisScroll);
-      gsap.ticker.remove(hudTick);
-      videos.forEach((v, k) => v.removeEventListener('ended', endedHandlers[k]));
+      st.kill();
+      io.disconnect();
+      ro.disconnect();
+      gsap.ticker.remove(tick);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assets]);
-
-  // Activation after the loader clears: show the OBJECT rest.
-  useEffect(() => {
-    if (!active) return;
-    const img = imgARef.current;
-    if (img && !img.src) {
-      img.src = assets.restSrc(0);
-      gsap.set(img, { opacity: 1, zIndex: 1 });
-      const el = overlayRefs.current[0];
-      if (el) {
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: 14, visibility: 'visible' },
-          { opacity: 1, y: 0, duration: 0.55, delay: 0.4, ease: 'power2.out' },
-        );
-      }
-    }
-  }, [active, assets]);
+  }, [storeRef, count, zoneWindows]);
 
   return (
-    <section ref={sectionRef} className="dive" aria-label="The Q-ARMOR dive" id="dive">
+    <section ref={trackRef} className="dive-track" style={{ height: trackHeight }} aria-label="The Q-ARMOR dive">
       <div className="dive-stage">
-        <div className="dive-media-stack" aria-hidden="true">
-          <img ref={imgARef} className="dive-media" alt="" draggable={false} />
-          <img ref={imgBRef} className="dive-media" alt="" draggable={false} />
-          {[0, 1, 2, 3, 4].map((i) => (
-            <video
-              key={i}
-              ref={(el) => {
-                videoRefs.current[i] = el;
-              }}
-              className="dive-media dive-video"
-              muted
-              playsInline
-              preload="none"
-              disablePictureInPicture
-              tabIndex={-1}
-            />
-          ))}
-        </div>
+        <canvas ref={canvasRef} className="dive-canvas" aria-hidden="true" />
         <div className="dive-grade" />
         <div className="dive-vignette" />
         <div className="dive-grain" />
@@ -581,12 +319,12 @@ export default function Dive({ assets, active }: DiveProps) {
           <i />
         </div>
 
-        <div ref={hintRef} className="overlay overlay--hint" style={{ opacity: 0 }}>
+        <div ref={hintRef} className="overlay overlay--hint" style={{ opacity: 1 }}>
           <span className="micro">Scroll to descend</span>
           <span className="overlay__hint-line" />
         </div>
 
-        {/* Zone facts — one per rest state */}
+        {/* Zone facts */}
         {ZONES.map((zone, i) => (
           <div
             key={zone.id}
@@ -594,7 +332,6 @@ export default function Dive({ assets, active }: DiveProps) {
               overlayRefs.current[i] = el;
             }}
             className="overlay overlay--zone"
-            style={{ opacity: 0, visibility: 'hidden' }}
           >
             <div className="overlay__kicker">
               Zone 0{i + 1} — {zone.kicker}
@@ -610,12 +347,12 @@ export default function Dive({ assets, active }: DiveProps) {
         ))}
 
         {/* HUD */}
-        <div className="hud" data-on={active ? 'true' : 'false'}>
+        <div ref={hudRef} className="hud" data-on={active ? 'true' : 'false'}>
           <div className="hud__corner hud__corner--tl">
             <div className="hud__brand wordmark">
               CERAQO <span style={{ color: 'var(--c-cyan)' }}>/</span> Q-ARMOR
             </div>
-            <div className="hud__sub">Surface dive — five depths</div>
+            <div className="hud__sub">Surface dive — unbroken shot</div>
           </div>
 
           <div className="hud__corner hud__corner--bl">
@@ -642,13 +379,8 @@ export default function Dive({ assets, active }: DiveProps) {
                 }}
                 className="hud__zone"
                 data-active={i === 0 ? 'true' : 'false'}
-                aria-label={`Go to zone ${i + 1} — ${zone.kicker}`}
-                onClick={() => {
-                  const s = sectionRef.current as
-                    | (HTMLElement & { __railJump?: (i: number) => void })
-                    | null;
-                  s?.__railJump?.(i);
-                }}
+                aria-label={`Jump to zone ${i + 1} — ${zone.kicker}`}
+                onClick={() => jumpToZone(i)}
               >
                 <span className="hud__zone-num">0{i + 1}</span>
                 {zone.label}

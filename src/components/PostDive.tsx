@@ -131,10 +131,6 @@ const FAQ_PRIMARY: { q: string; a: string }[] = [
     a: 'Yes. Wipe on, buff, let it cure — about an hour in your driveway. No installer, no equipment, no experience.',
   },
   {
-    q: 'How long does the protection last?',
-    a: 'Up to 72 months, depending on preparation, environment and washing routine.',
-  },
-  {
     q: 'When am I charged?',
     a: PREORDER_URL
       ? 'At checkout, the moment you place your pre-order. Your order secures your spot in Batch 001.'
@@ -143,6 +139,10 @@ const FAQ_PRIMARY: { q: string; a: string }[] = [
 ];
 
 const FAQ_MORE: { q: string; a: string }[] = [
+  {
+    q: 'How long does the protection last?',
+    a: 'Up to 72 months, depending on preparation, environment and washing routine.',
+  },
   {
     q: 'How hard is the cured layer?',
     a: 'Up to 9H pencil hardness — engineered to outperform today’s premium ceramic coatings.',
@@ -156,6 +156,13 @@ const FAQ_MORE: { q: string; a: string }[] = [
     a: '20,000 numbered bottles per batch. A new batch every two months. When one sells out, pre-orders open for the next — a production schedule, not artificial scarcity.',
   },
 ];
+
+/**
+ * Mobile-collapsed blocks start open on desktop (there's room) and
+ * closed on phones. Collapsed content stays in the DOM (`hidden`),
+ * so nothing is deleted — it is revealed on tap.
+ */
+const startOpen = () => window.matchMedia('(min-width: 821px)').matches;
 
 function FaqItem({ q, a }: { q: string; a: string }) {
   return (
@@ -210,6 +217,10 @@ export default function PostDive() {
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rowsOpen, setRowsOpen] = useState(startOpen);
+  const [fitOpen, setFitOpen] = useState(startOpen);
+  const [factorsOpen, setFactorsOpen] = useState(startOpen);
+  const [batchOpen, setBatchOpen] = useState(startOpen);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -391,8 +402,19 @@ export default function PostDive() {
             Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72
             months.<sup className="asterisk">*</sup>
           </p>
-          <div className="factors__label micro">* Dependent factors</div>
-          <ul className="chips chips--micro">
+          <div className="factors__label micro">
+            * Dependent factors
+            {!factorsOpen && (
+              <button
+                type="button"
+                className="expander expander--inline"
+                onClick={() => setFactorsOpen(true)}
+              >
+                show
+              </button>
+            )}
+          </div>
+          <ul className="chips chips--micro" hidden={!factorsOpen}>
             {FACTORS.map((f) => (
               <li key={f} className="chip">
                 {f}
@@ -417,7 +439,7 @@ export default function PostDive() {
               <strong className="compare__price">€169</strong>
               <span className="micro compare__per">per kit — protects up to two large vehicles</span>
             </header>
-            <dl className="compare__rows">
+            <dl className="compare__rows" hidden={!rowsOpen}>
               {COMPARE_ROWS.map((r) => (
                 <div key={r.label} className="compare__row">
                   <dt className="micro">{r.label}</dt>
@@ -432,7 +454,7 @@ export default function PostDive() {
               <strong className="compare__price compare__price--dim">€700–€2,500+</strong>
               <span className="micro compare__per">per vehicle at premium detailing shops</span>
             </header>
-            <dl className="compare__rows">
+            <dl className="compare__rows" hidden={!rowsOpen}>
               {COMPARE_ROWS.map((r) => (
                 <div key={r.label} className="compare__row">
                   <dt className="micro">{r.label}</dt>
@@ -442,6 +464,11 @@ export default function PostDive() {
             </dl>
           </article>
         </div>
+        {!rowsOpen && (
+          <button type="button" className="expander reveal" onClick={() => setRowsOpen(true)}>
+            Compare line by line
+          </button>
+        )}
         <p className="compare__note micro reveal">
           Professional pricing varies by market, vehicle size, preparation and coating tier.
         </p>
@@ -462,11 +489,18 @@ export default function PostDive() {
         <div id="s-fit" className="subblock reveal">
           <div className="subhead micro micro--cyan">Suitable For</div>
           <ul className="chips">
-            {SUITABLE.map((s) => (
-              <li key={s} className="chip">
+            {SUITABLE.map((s, i) => (
+              <li key={s} className="chip" hidden={!fitOpen && i >= 6}>
                 {s}
               </li>
             ))}
+            {!fitOpen && (
+              <li>
+                <button type="button" className="chip chip--more" onClick={() => setFitOpen(true)}>
+                  +{SUITABLE.length - 6} more
+                </button>
+              </li>
+            )}
           </ul>
         </div>
       </section>
@@ -573,7 +607,12 @@ export default function PostDive() {
             Your address is used only to contact you about Batch 001 — never shared, never
             sold. <a className="waitlist__legal-link" href="#privacy">Privacy notice</a>
           </p>
-          <div className="batchbox reveal">
+          {!batchOpen && (
+            <button type="button" className="expander expander--center reveal" onClick={() => setBatchOpen(true)}>
+              How the batch model works
+            </button>
+          )}
+          <div className="batchbox reveal" hidden={!batchOpen}>
             <p>
               Numbered batches of 20,000 bottles. A new batch every two months. When one
               sells out, pre-orders open for the next — a production schedule, not

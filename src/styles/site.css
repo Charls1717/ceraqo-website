@@ -2010,6 +2010,69 @@ a.waitlist__btn {
   margin-top: 1.4rem;
 }
 
+/* Progressive disclosure: collapsed on phones, open on desktop.
+   Content is hidden, not removed — [hidden] must always win. */
+[hidden] {
+  display: none !important;
+}
+
+.expander {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  background: none;
+  border: 1px solid var(--c-line);
+  color: var(--c-text-mid);
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s;
+}
+
+.expander::after {
+  content: '+';
+  color: var(--c-cyan);
+}
+
+.expander:hover {
+  color: var(--c-cyan);
+  border-color: rgba(92, 233, 228, 0.4);
+}
+
+.expander--inline {
+  margin: 0 0 0 0.6rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.52rem;
+}
+
+.expander--center {
+  margin-inline: auto;
+}
+
+.chip--more {
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--c-cyan);
+  border-color: rgba(92, 233, 228, 0.35);
+  cursor: pointer;
+}
+
+/* Desktop starts open, so the toggles never render there — but if a
+   resize races the initial state, keep them hidden anyway. */
+@media (min-width: 821px) {
+  .expander,
+  .chip--more {
+    display: none;
+  }
+}
+
 /* Inline checklist chips replace the one-per-row list */
 .checklist {
   display: flex;
@@ -2106,14 +2169,15 @@ a.waitlist__btn {
 /* Mobile: spacing proportionate to a small screen, lists stay wrapped */
 @media (max-width: 820px) {
   .post .section {
-    padding-block: 1.7rem;
+    padding-block: 1.35rem;
   }
   .post .section__title {
     font-size: clamp(1.35rem, 6vw, 1.8rem);
   }
   .post .prose {
     font-size: 0.9rem;
-    margin-top: 0.8rem;
+    margin-top: 0.7rem;
+    line-height: 1.55;
   }
   .section__kickrow {
     margin-bottom: 0.8rem;
@@ -2125,7 +2189,7 @@ a.waitlist__btn {
     display: none;
   }
   .subblock {
-    margin-top: 1.4rem;
+    margin-top: 1.1rem;
   }
   .subhead {
     margin-bottom: 0.8rem;
@@ -2294,12 +2358,20 @@ a.waitlist__btn {
     font-size: 0.78rem;
   }
   .philline {
-    margin-top: 1.4rem;
-    font-size: 0.95rem;
+    margin-top: 1rem;
+    font-size: 0.92rem;
   }
   .launchline {
-    margin-top: 0.7rem;
-    font-size: 0.95rem;
+    margin-top: 0.5rem;
+    font-size: 0.92rem;
+  }
+  .checklist {
+    margin-top: 0.5rem;
+    gap: 0.3rem;
+  }
+  .checklist__item {
+    padding: 0.34rem 0.55rem;
+    font-size: 0.64rem;
   }
   .faq__q {
     padding: 0.78rem 0.1rem;
@@ -2310,11 +2382,14 @@ a.waitlist__btn {
     font-size: 0.85rem;
   }
   .waitlist {
-    padding-top: 1.4rem;
-    padding-bottom: 1.2rem;
+    padding-top: 1.2rem;
+    padding-bottom: 1rem;
   }
   .waitlist .section__title {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
+  }
+  .batchline {
+    margin-top: 0.7rem;
   }
   .waitlist__form {
     margin-top: 1rem;
@@ -2340,6 +2415,9 @@ a.waitlist__btn {
   }
   .stepstrip {
     margin-top: 0.8rem;
+  }
+  #s-apply .section__title {
+    font-size: 1.1rem;
   }
   .legal {
     padding: 1.4rem var(--inset-x) 1.6rem;

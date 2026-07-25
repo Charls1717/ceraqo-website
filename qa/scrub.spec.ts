@@ -549,6 +549,48 @@ test('privacy: form links to the notice and the notice exists', async ({ page })
   await expect(page.locator('.footer__link')).toHaveAttribute('href', '#privacy');
 });
 
+test('disclosures: full content on desktop, collapsed-but-present on mobile', async ({ page }) => {
+  // Desktop (default viewport): everything open, no toggle buttons
+  await waitForStart(page);
+  await expect(page.locator('.compare__rows').first()).toBeVisible();
+  await expect(page.locator('#s-fit .chip')).toHaveCount(15);
+  await expect(page.locator('.batchbox')).toBeAttached();
+  await expect(page.locator('.expander')).toHaveCount(0);
+});
+
+test.describe('mobile disclosures', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('collapsed blocks expand on tap and content is never deleted', async ({ page }) => {
+    await waitForStart(page);
+
+    // Comparison detail rows behind "Compare line by line"
+    await page.locator('#s-value').scrollIntoViewIfNeeded();
+    await expect(page.locator('.compare__rows').first()).toBeHidden();
+    await page.locator('.expander', { hasText: 'Compare line by line' }).click();
+    await expect(page.locator('.compare__rows').first()).toBeVisible();
+    await expect(page.locator('.compare__row dd').first()).toContainText('Self-applied');
+
+    // Compatibility cloud: 6 visible + the rest behind "+9 more"
+    await page.locator('#s-fit').scrollIntoViewIfNeeded();
+    const visibleChips = page.locator('#s-fit .chip:visible');
+    expect(await visibleChips.count()).toBeLessThanOrEqual(8);
+    await page.locator('.chip--more').click();
+    await expect(page.locator('#s-fit .chip:visible')).toHaveCount(15);
+
+    // Dependent factors behind the asterisk "show"
+    await page.locator('.footnote').scrollIntoViewIfNeeded();
+    await page.locator('.expander--inline').click();
+    await expect(page.locator('.chips--micro .chip')).toHaveCount(6);
+
+    // Batch explainer behind "How the batch model works"
+    await page.locator('#s-access').scrollIntoViewIfNeeded();
+    await expect(page.locator('.batchbox')).toBeHidden();
+    await page.locator('.expander', { hasText: 'How the batch model works' }).click();
+    await expect(page.locator('.batchbox')).toContainText('not artificial scarcity');
+  });
+});
+
 /**
  * Item-10 audit: real phone widths. Each width is its own test so a
  * failure names the viewport, and each gets a fresh full load.

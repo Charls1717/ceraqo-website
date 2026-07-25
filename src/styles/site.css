@@ -1775,3 +1775,17 @@
 .waitlist > :not(.waitlist__ghost) {
   position: relative;
 }
+
+/* Pre-order controls render as links once a checkout URL is configured */
+a.cta__btn,
+a.waitlist__btn {
+  text-decoration: none;
+}
+
+.waitlist__btn--link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2.4rem;
+  padding-inline: 2.6rem;
+}

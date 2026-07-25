@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { assetUrl } from '../lib/assetUrl';
+import { PREORDER_URL } from '../config';
 import {
   IconAbrasion,
   IconChemical,
@@ -106,7 +107,7 @@ const COMPARE_ROWS: { label: string; q: string; pro: string }[] = [
   {
     label: 'Protection window',
     q: 'Up to 72 months*',
-    pro: 'Commonly 2–5 years, tier dependent',
+    pro: 'Commonly 24–60 months, tier dependent',
   },
   {
     label: 'Time & place',
@@ -544,7 +545,13 @@ export default function PostDive() {
           <span className="batchline__num">Batch 001</span> · 20,000 bottles · a new batch
           every two months
         </p>
-        {joined ? (
+        {PREORDER_URL ? (
+          // Live checkout mode — flips on automatically once the
+          // Shopify URL is set in src/config.ts.
+          <a className="waitlist__btn waitlist__btn--link reveal" href={PREORDER_URL} target="_blank" rel="noopener">
+            Pre-order — €169
+          </a>
+        ) : joined ? (
           <div className="waitlist__ok" role="status">
             You’re on the list for Batch 001. We’ll be in touch before it ships.
           </div>

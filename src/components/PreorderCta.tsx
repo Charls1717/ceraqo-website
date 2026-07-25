@@ -1,10 +1,16 @@
 import type Lenis from 'lenis';
+import { PREORDER_URL } from '../config';
 
 /**
- * The persistent pre-order pill: fixed top-right, visible from the
- * first viewport to the footer. The wrapper is pointer-transparent so
- * it can never eat a scroll gesture — only the button itself is
- * clickable — and it sits above the HUD but below the loader.
+ * The persistent pre-order pill: fixed top-right (bottom-right on
+ * phones), visible from the first viewport to the footer. The wrapper
+ * is pointer-transparent so it can never eat a scroll gesture — only
+ * the control itself is clickable — and it sits above the HUD but
+ * below the loader.
+ *
+ * With PREORDER_URL unset it scrolls to the Batch 001 reservation
+ * form; once the Shopify URL is configured (see src/config.ts) it
+ * becomes a direct checkout link.
  */
 export default function PreorderCta({ on }: { on: boolean }) {
   const jump = () => {
@@ -17,9 +23,21 @@ export default function PreorderCta({ on }: { on: boolean }) {
   };
   return (
     <div className="cta" data-on={on ? 'true' : 'false'}>
-      <button type="button" className="cta__btn" onClick={jump} aria-label="Pre-order Q-ARMOR, 169 euro">
-        Pre-order <span className="cta__price">€169</span>
-      </button>
+      {PREORDER_URL ? (
+        <a
+          className="cta__btn"
+          href={PREORDER_URL}
+          target="_blank"
+          rel="noopener"
+          aria-label="Pre-order Q-ARMOR, 169 euro"
+        >
+          Pre-order <span className="cta__price">€169</span>
+        </a>
+      ) : (
+        <button type="button" className="cta__btn" onClick={jump} aria-label="Pre-order Q-ARMOR, 169 euro">
+          Pre-order <span className="cta__price">€169</span>
+        </button>
+      )}
       <span className="cta__batch micro" aria-hidden="true">
         Batch 001 · 20,000 bottles
       </span>

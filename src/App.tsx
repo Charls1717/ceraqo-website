@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Intro from './components/Intro';
 import Dive from './components/Dive';
+import SideNav from './components/SideNav';
 import Preloader from './components/Preloader';
 import PostDive from './components/PostDive';
 import { useFrameStore, type FrameProfile } from './hooks/useFrameLoader';
@@ -70,6 +71,17 @@ export default function App() {
       <Dive storeRef={storeRef} profile={profile} active={started} />
       <Intro />
       <PostDive />
+      <SideNav
+        stops={[
+          { id: 's-protection', num: '01', label: 'Protection' },
+          { id: 's-threats', num: '02', label: 'Threats' },
+          { id: 's-specs', num: '03', label: 'Specs' },
+          { id: 's-apply', num: '04', label: 'Apply' },
+          { id: 's-kit', num: '05', label: 'Kit' },
+          { id: 's-science', num: '06', label: 'Science' },
+          { id: 's-access', num: '07', label: 'Access' },
+        ]}
+      />
       {diag && <Diag profile={profile} progress={progress} ready={ready} started={started} />}
     </>
   );

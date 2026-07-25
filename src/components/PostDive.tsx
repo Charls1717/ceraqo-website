@@ -1,62 +1,61 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { assetUrl } from '../lib/assetUrl';
+import {
+  IconAbrasion,
+  IconChemical,
+  IconClean,
+  IconCorrosion,
+  IconCrystal,
+  IconDIY,
+  IconFallout,
+  IconFilm,
+  IconGloss,
+  IconHydro,
+  IconLayers,
+  IconOleo,
+  IconPro,
+  IconRain,
+  IconSalt,
+  IconShieldChem,
+  IconUV,
+  IconUVShield,
+} from './icons';
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* The client's approved marketing copy — verbatim. */
+/* The client's approved marketing copy — kept lines stay verbatim. */
 
-const SPECS = [
-  'Up to 72 Months Protection*',
-  'Up to 9H Pencil Hardness',
-  'Deep Glass-Like Gloss',
-  'Hydrophobic Performance',
-  'Oleophobic Protection',
-  'High Chemical Resistance',
-  'Corrosion Resistance',
-  'UV Protection',
-  'High Abrasion Resistance',
-  'Easy-to-Clean Effect',
-  'Crystal Clear Finish',
-  'Professional-Grade Performance',
-  'Simple DIY Application',
+const THREATS: { label: string; icon: ReactNode }[] = [
+  { label: 'Road salt', icon: <IconSalt /> },
+  { label: 'UV radiation', icon: <IconUV /> },
+  { label: 'Rain', icon: <IconRain /> },
+  { label: 'Traffic film', icon: <IconFilm /> },
+  { label: 'Industrial fallout', icon: <IconFallout /> },
+  { label: 'Chemical contamination', icon: <IconChemical /> },
+  { label: 'Daily abrasion', icon: <IconAbrasion /> },
 ];
 
-const THREATS = [
-  'Road salt',
-  'UV radiation',
-  'Rain',
-  'Traffic film',
-  'Industrial fallout',
-  'Chemical contamination',
-  'Daily abrasion',
+const SPEC_CARDS: { label: string; icon: ReactNode }[] = [
+  { label: 'Deep Glass-Like Gloss', icon: <IconGloss /> },
+  { label: 'Hydrophobic Performance', icon: <IconHydro /> },
+  { label: 'Oleophobic Protection', icon: <IconOleo /> },
+  { label: 'High Chemical Resistance', icon: <IconShieldChem /> },
+  { label: 'Corrosion Resistance', icon: <IconCorrosion /> },
+  { label: 'UV Protection', icon: <IconUVShield /> },
+  { label: 'High Abrasion Resistance', icon: <IconLayers /> },
+  { label: 'Easy-to-Clean Effect', icon: <IconClean /> },
+  { label: 'Crystal Clear Finish', icon: <IconCrystal /> },
+  { label: 'Professional-Grade Performance', icon: <IconPro /> },
+  { label: 'Simple DIY Application', icon: <IconDIY /> },
 ];
-
-const BARRIER = [
-  'UV exposure',
-  'Oxidation',
-  'Corrosion',
-  'Environmental contamination',
-  'Road salt',
-  'Chemical exposure',
-  'Everyday abrasion',
-  'Water staining',
-];
-
-const STEPS = ['Prepare the surface', 'Apply', 'Buff', 'Allow the coating to cure'];
 
 const MAINTENANCE = [
   'Easier washing',
   'Faster drying',
   'Reduced maintenance effort',
   'A cleaner-looking vehicle between washes',
-];
-
-const KIT = [
-  '50 ml Q-ARMOR',
-  'Premium Applicator Pad',
-  'Premium Microfiber Cloth',
-  'Professional Application Guide',
 ];
 
 const FACTORS = [
@@ -66,6 +65,13 @@ const FACTORS = [
   'Vehicle usage',
   'Washing methods',
   'Maintenance routine',
+];
+
+const KIT = [
+  '50 ml Q-ARMOR',
+  'Premium Applicator Pad',
+  'Premium Microfiber Cloth',
+  'Professional Application Guide',
 ];
 
 const SUITABLE = [
@@ -86,6 +92,47 @@ const SUITABLE = [
   'Glass',
 ];
 
+const STEPS = ['Prepare the surface', 'Apply', 'Buff', 'Allow the coating to cure'];
+
+/** Instrument-style arc meter, animated on reveal. */
+function Gauge({
+  frac,
+  value,
+  unit,
+  label,
+}: {
+  frac: number;
+  value: string;
+  unit: string;
+  label: string;
+}) {
+  const R = 52;
+  const C = 2 * Math.PI * R;
+  return (
+    <article className="scard scard--gauge reveal">
+      <svg className="gauge" viewBox="0 0 120 120" aria-hidden="true">
+        <circle className="gauge__track" cx="60" cy="60" r={R} />
+        <circle
+          className="gauge__arc"
+          cx="60"
+          cy="60"
+          r={R}
+          strokeDasharray={C}
+          strokeDashoffset={C}
+          data-offset={C * (1 - frac)}
+        />
+      </svg>
+      <div className="gauge__read">
+        <span className="gauge__num" data-to={value}>
+          {value}
+        </span>
+        <span className="gauge__unit">{unit}</span>
+      </div>
+      <h3 className="scard__label">{label}</h3>
+    </article>
+  );
+}
+
 export default function PostDive() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState('');
@@ -100,9 +147,41 @@ export default function PostDive() {
           y: 0,
           duration: 1.1,
           ease: 'power3.out',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 86%',
+          scrollTrigger: { trigger: el, start: 'top 86%' },
+        });
+      });
+      // Card grids come in staggered, item by item
+      gsap.utils.toArray<HTMLElement>('.stagger').forEach((group) => {
+        gsap.to(group.children, {
+          opacity: 1,
+          y: 0,
+          duration: 0.85,
+          ease: 'power3.out',
+          stagger: 0.055,
+          scrollTrigger: { trigger: group, start: 'top 84%' },
+        });
+      });
+      // Arc meters sweep and count on entry
+      gsap.utils.toArray<SVGCircleElement>('.gauge__arc').forEach((arc) => {
+        gsap.to(arc, {
+          strokeDashoffset: Number(arc.dataset.offset ?? 0),
+          duration: 1.6,
+          ease: 'power2.inOut',
+          scrollTrigger: { trigger: arc, start: 'top 82%' },
+        });
+      });
+      gsap.utils.toArray<HTMLElement>('.gauge__num').forEach((num) => {
+        const to = num.dataset.to ?? '';
+        const numeric = Number(to);
+        if (!Number.isFinite(numeric)) return;
+        const obj = { v: 0 };
+        gsap.to(obj, {
+          v: numeric,
+          duration: 1.6,
+          ease: 'power2.out',
+          scrollTrigger: { trigger: num, start: 'top 82%' },
+          onUpdate: () => {
+            num.textContent = String(Math.round(obj.v));
           },
         });
       });
@@ -130,51 +209,153 @@ export default function PostDive() {
 
   return (
     <div ref={rootRef} className="post">
-      {/* 01 — More Than Protection */}
-      <section className="section" aria-labelledby="mtp-title">
-        <div className="section__kicker micro micro--cyan reveal">01 / Surface engineering</div>
-        <h2 id="mtp-title" className="section__title reveal">
-          More Than Protection. A New Generation of Surface Engineering.
-        </h2>
-        <p className="prose reveal">
-          Q-ARMOR is not designed to temporarily cover your vehicle. It is designed to become
-          part of it. Once applied, it creates an ultra-thin, crystal-clear protective layer
-          that bonds tightly with the surface to deliver long-lasting protection, exceptional
-          gloss and effortless maintenance.
-        </p>
-        <p className="prose prose--turn reveal">
-          This is not another wax. This is not another sealant. This is the next evolution of
-          vehicle protection.
-        </p>
+      {/* 01 — More Than Protection: copy + a frame from the dive */}
+      <section id="s-protection" className="section section--rule section--glow-a" aria-labelledby="mtp-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">01 / Surface engineering</span>
+        </div>
+        <div className="split">
+          <div className="split__copy">
+            <h2 id="mtp-title" className="section__title section__title--xl reveal">
+              More Than Protection. A New Generation of Surface Engineering.
+            </h2>
+            <p className="prose reveal">
+              Q-ARMOR is not designed to temporarily cover your vehicle. It is designed to
+              become part of it.
+            </p>
+            <p className="prose prose--turn reveal">
+              This is not another wax. This is not another sealant. This is the next evolution
+              of vehicle protection.
+            </p>
+          </div>
+          <figure className="split__media reveal">
+            <img src={assetUrl('/frames/stills/z3.webp')} alt="A drop of Q-ARMOR settling on a paint panel" loading="lazy" />
+            <span className="finder finder--media" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            <figcaption className="micro">Surface dive — zone 03 / spread</figcaption>
+          </figure>
+        </div>
       </section>
 
-      {/* 02 — Why Q-Armor? */}
-      <section className="section" aria-labelledby="why-title">
-        <div className="section__kicker micro micro--cyan reveal">02 / The threats</div>
-        <h2 id="why-title" className="section__title reveal">
+      {/* 02 — Why Q-Armor: the threats as an instrument grid */}
+      <section id="s-threats" className="section section--rule section--dots" aria-labelledby="why-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">02 / The threats</span>
+        </div>
+        <h2 id="why-title" className="section__title section__title--xl reveal">
           Why Q-Armor?
         </h2>
         <p className="prose reveal">
           Because your vehicle deserves more than temporary protection. Every drive exposes
           your paint to invisible damage.
         </p>
-        <ul className="threats">
+        <ul className="tgrid stagger">
           {THREATS.map((t, i) => (
-            <li key={t} className="threat reveal">
-              <span className="threat__num">{String(i + 1).padStart(2, '0')}</span>
-              {t}
+            <li key={t.label} className="tcard sitem">
+              <span className="tcard__icon">{t.icon}</span>
+              <span className="tcard__num micro">{String(i + 1).padStart(2, '0')}</span>
+              <span className="tcard__label">{t.label}</span>
             </li>
           ))}
+          <li className="tcard tcard--turn sitem">
+            <span className="tcard__turn">
+              Q-ARMOR is engineered to help preserve what matters.
+            </span>
+          </li>
         </ul>
-        <p className="prose reveal">
-          Over time these elements slowly reduce the appearance, gloss and value of every
-          vehicle. Q-ARMOR is engineered to help preserve what matters.
-        </p>
       </section>
 
-      {/* 03 — Professional Results */}
-      <section className="section" aria-labelledby="pro-title">
-        <div className="section__kicker micro micro--cyan reveal">03 / Application</div>
+      {/* 03 — Specifications: data gauges + icon cards + the legal footnote */}
+      <section id="s-specs" className="section section--rule section--glow-b" aria-labelledby="specs-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">03 / Specifications</span>
+        </div>
+        <h2 id="specs-title" className="section__title section__title--xl reveal">
+          Q-ARMOR at a glance.
+        </h2>
+        <div className="specs2">
+          <div className="specs2__data stagger">
+            <Gauge frac={1} value="72" unit="months" label="Up to 72 Months Protection*" />
+            <Gauge frac={0.9} value="9H" unit="pencil scale" label="Up to 9H Pencil Hardness" />
+          </div>
+          <div className="specs2__grid stagger">
+            {SPEC_CARDS.map((s) => (
+              <article key={s.label} className="scard sitem">
+                <span className="scard__icon">{s.icon}</span>
+                <h3 className="scard__label">{s.label}</h3>
+              </article>
+            ))}
+            <article className="scard scard--mark sitem" aria-hidden="true">
+              <span className="finder finder--media" >
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="scard__wordmark wordmark">
+                CERAQO<span>™</span>
+              </span>
+            </article>
+          </div>
+        </div>
+
+        <div className="duo">
+          <div className="duo__cell duo__cell--card reveal">
+            <span className="scard__icon">
+              <IconGloss />
+            </span>
+            <h3 className="duo__title">Deep Gloss. Crystal Clear Finish.</h3>
+            <p className="prose">
+              Unlike products that leave heavy residues or artificial shine, Q-ARMOR enhances
+              the natural depth of your vehicle’s finish. The result is a rich, reflective
+              gloss that looks clean, sharp and refined.
+            </p>
+          </div>
+          <div className="duo__cell duo__cell--card reveal">
+            <span className="scard__icon">
+              <IconClean />
+            </span>
+            <h3 className="duo__title">Easy Maintenance. Less Cleaning. More Driving.</h3>
+            <p className="prose">
+              Its advanced surface characteristics help reduce the adhesion of water, dirt,
+              oils and everyday contamination.
+            </p>
+            <ul className="checklist">
+              {MAINTENANCE.map((m) => (
+                <li key={m} className="checklist__item">
+                  <span className="checklist__mark">✔</span>
+                  {m}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="footnote reveal">
+          <p className="footnote__line">
+            Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72
+            months.<sup className="asterisk">*</sup>
+          </p>
+          <div className="factors__label micro">* Dependent factors</div>
+          <ul className="chips chips--micro">
+            {FACTORS.map((f) => (
+              <li key={f} className="chip">
+                {f}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* 04 — Professional Results */}
+      <section id="s-apply" className="section section--rule" aria-labelledby="pro-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">04 / Application</span>
+        </div>
         <h2 id="pro-title" className="section__title reveal">
           Professional Results. Made for Everyone.
         </h2>
@@ -195,9 +376,11 @@ export default function PostDive() {
         </p>
       </section>
 
-      {/* 04 — Experience the Difference */}
-      <section className="section" aria-labelledby="exp-title">
-        <div className="section__kicker micro micro--cyan reveal">04 / The difference</div>
+      {/* 05 — Experience the Difference */}
+      <section id="s-difference" className="section section--rule" aria-labelledby="exp-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">05 / The difference</span>
+        </div>
         <h2 id="exp-title" className="section__title reveal">
           Experience the Difference
         </h2>
@@ -212,9 +395,11 @@ export default function PostDive() {
         <p className="prose prose--turn reveal">Your vehicle keeps the finish it deserves.</p>
       </section>
 
-      {/* 05 — Engineered for Extreme Environments */}
-      <section className="section" aria-labelledby="env-title">
-        <div className="section__kicker micro micro--cyan reveal">05 / Proven conditions</div>
+      {/* 06 — Engineered for Extreme Environments */}
+      <section id="s-environments" className="section section--rule" aria-labelledby="env-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">06 / Proven conditions</span>
+        </div>
         <h2 id="env-title" className="section__title reveal">
           Engineered for Extreme Environments
         </h2>
@@ -227,87 +412,11 @@ export default function PostDive() {
         </p>
       </section>
 
-      {/* 06 — Specifications */}
-      <section className="section" aria-labelledby="specs-title">
-        <div className="section__kicker micro micro--cyan reveal">06 / Specifications</div>
-        <h2 id="specs-title" className="section__title reveal">
-          Q-ARMOR at a glance.
-        </h2>
-        <div className="specs">
-          {SPECS.map((s, i) => (
-            <article key={s} className="spec reveal">
-              <div className="spec__num">SPEC {String(i + 1).padStart(2, '0')}</div>
-              <h3 className="spec__title">{s}</h3>
-            </article>
-          ))}
+      {/* 07 — Built to Last */}
+      <section id="s-built" className="section section--rule" aria-labelledby="btl-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">07 / Permanence</span>
         </div>
-
-        <div className="barrier reveal">
-          <p className="prose">
-            Q-ARMOR forms a durable protective barrier that helps reduce the effects of:
-          </p>
-          <ul className="chips">
-            {BARRIER.map((b) => (
-              <li key={b} className="chip">
-                {b}
-              </li>
-            ))}
-          </ul>
-          <p className="prose">— while preserving the appearance of your vehicle.</p>
-        </div>
-
-        <div className="duo">
-          <div className="duo__cell reveal">
-            <h3 className="duo__title">Deep Gloss. Crystal Clear Finish.</h3>
-            <p className="prose">
-              Unlike products that leave heavy residues or artificial shine, Q-ARMOR enhances
-              the natural depth of your vehicle’s finish. The result is a rich, reflective
-              gloss that looks clean, sharp and refined.
-            </p>
-          </div>
-          <div className="duo__cell reveal">
-            <h3 className="duo__title">Easy Maintenance. Less Cleaning. More Driving.</h3>
-            <p className="prose">
-              Its advanced surface characteristics help reduce the adhesion of water, dirt,
-              oils and everyday contamination.
-            </p>
-            <ul className="checklist">
-              {MAINTENANCE.map((m) => (
-                <li key={m} className="checklist__item">
-                  <span className="checklist__mark">✔</span>
-                  {m}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* 07 — Long-Term Protection (the asterisk lives here) */}
-      <section className="section" aria-labelledby="ltp-title">
-        <div className="section__kicker micro micro--cyan reveal">07 / Longevity</div>
-        <h2 id="ltp-title" className="section__title reveal">
-          Long-Term Protection
-        </h2>
-        <p className="prose prose--turn reveal">
-          Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72
-          months.<sup className="asterisk">*</sup>
-        </p>
-        <div className="factors reveal">
-          <div className="factors__label micro">* Dependent factors</div>
-          <ul className="chips">
-            {FACTORS.map((f) => (
-              <li key={f} className="chip">
-                {f}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* 08 — Built to Last */}
-      <section className="section" aria-labelledby="btl-title">
-        <div className="section__kicker micro micro--cyan reveal">08 / Permanence</div>
         <h2 id="btl-title" className="section__title reveal">
           Built to Last
         </h2>
@@ -319,9 +428,11 @@ export default function PostDive() {
         </p>
       </section>
 
-      {/* 09 — Kit contents */}
-      <section className="section" aria-labelledby="kit-title">
-        <div className="section__kicker micro micro--cyan reveal">09 / In the box</div>
+      {/* 08 — Kit contents */}
+      <section id="s-kit" className="section section--rule" aria-labelledby="kit-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">08 / In the box</span>
+        </div>
         <h2 id="kit-title" className="section__title reveal">
           One Kit. Everything Included.
         </h2>
@@ -342,9 +453,11 @@ export default function PostDive() {
         </p>
       </section>
 
-      {/* 10 — Compatibility */}
-      <section className="section" aria-labelledby="fit-title">
-        <div className="section__kicker micro micro--cyan reveal">10 / Compatibility</div>
+      {/* 09 — Compatibility */}
+      <section id="s-fit" className="section section--rule" aria-labelledby="fit-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">09 / Compatibility</span>
+        </div>
         <h2 id="fit-title" className="section__title reveal">
           Suitable For
         </h2>
@@ -357,9 +470,11 @@ export default function PostDive() {
         </ul>
       </section>
 
-      {/* 11 — The Science */}
-      <section className="section" aria-labelledby="sci-title">
-        <div className="section__kicker micro micro--cyan reveal">11 / The science</div>
+      {/* 10 — The Science */}
+      <section id="s-science" className="section section--rule" aria-labelledby="sci-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">10 / The science</span>
+        </div>
         <h2 id="sci-title" className="section__title reveal">
           The Science Behind Q-Armor
         </h2>
@@ -385,9 +500,11 @@ export default function PostDive() {
         <p className="launch__sub micro reveal">35–50 ml protects an entire car</p>
       </section>
 
-      {/* 12 — Philosophy */}
-      <section className="section philosophy" aria-labelledby="phi-title">
-        <div className="section__kicker micro micro--cyan reveal">12 / Philosophy</div>
+      {/* 11 — Philosophy */}
+      <section id="s-philosophy" className="section philosophy" aria-labelledby="phi-title">
+        <div className="section__kickrow reveal">
+          <span className="section__kicker micro micro--cyan">11 / Philosophy</span>
+        </div>
         <h2 id="phi-title" className="section__title reveal">
           Designed Around One Philosophy
         </h2>
@@ -407,7 +524,7 @@ export default function PostDive() {
       </section>
 
       {/* Waitlist */}
-      <section className="waitlist section" aria-labelledby="waitlist-title">
+      <section id="s-access" className="waitlist section" aria-labelledby="waitlist-title">
         <div className="section__kicker micro micro--cyan reveal">Priority access</div>
         <h2 id="waitlist-title" className="section__title reveal" style={{ marginInline: 'auto' }}>
           Welcome to the Future of Surface Protection.

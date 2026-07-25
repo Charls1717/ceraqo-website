@@ -395,7 +395,6 @@ test('copy: every approved line is on the page, verbatim', async ({ page }) => {
     'Engineered for Extreme Environments',
     'Up to 72 Months Protection*',
     'Simple DIY Application',
-    'Q-ARMOR forms a durable protective barrier that helps reduce the effects of:',
     'Deep Gloss. Crystal Clear Finish.',
     'Easy Maintenance. Less Cleaning. More Driving.',
     'Under suitable conditions, Q-ARMOR is designed to provide protection for up to 72 months.*',

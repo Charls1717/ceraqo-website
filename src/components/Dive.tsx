@@ -15,12 +15,13 @@ const LERP = 0.24;
 
 /**
  * Canvas backing-store DPR cap, independent of the fetched image tier.
- * Committing the canvas to the compositor costs main-thread time in
- * proportion to backing pixels (profiled: ~300ms/commit at dpr2 under
- * 4x throttle without GPU); 1.5 keeps retina crispness at ~half the
- * commit cost of dpr2 and ~a quarter of dpr3 phones.
+ * Committing the canvas to the compositor costs raster time in
+ * proportion to backing pixels; 1.25 costs ~39%% of dpr2 and ~69%% of
+ * the old 1.5 cap — the difference is invisible in motion on Retina
+ * panels and directly buys scrub headroom on MacBooks. The decode
+ * worker sizes bitmaps to the same cap so blits stay 1:1.
  */
-const DPR_CAP = 1.5;
+const DPR_CAP = 1.25;
 
 /** Zone-local fade windows for the fact copy (fractions of the zone). */
 const FACT_WINDOWS = [
@@ -169,6 +170,9 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
     let blendOn = true;
     let emaInterval = 16.7;
     let lastDrawnF = -1;
+    // Reduced motion: no eased cursor, no cross-fade — the canvas
+    // repaints only when the target frame index actually changes.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const tick = (_t: number, deltaTime: number) => {
       if (deltaTime > 0 && deltaTime < 120) {
@@ -178,7 +182,12 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
       }
       if (!inView) return;
       const diff = targetF - displayF;
-      if (Math.abs(diff) > 0.0015) {
+      if (reduceMotion) {
+        if (displayF !== targetF) {
+          displayF = targetF;
+          needsDraw = true;
+        }
+      } else if (Math.abs(diff) > 0.0015) {
         displayF += diff * LERP;
         if (Math.abs(targetF - displayF) < 0.0015) displayF = targetF;
         needsDraw = true;
@@ -197,7 +206,7 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
       if (needsDraw) {
         needsDraw = false;
         lastDrawnF = displayF;
-        draw(blendOn);
+        draw(blendOn && !reduceMotion);
       }
     };
     gsap.ticker.add(tick);

@@ -251,6 +251,12 @@ test.describe('high-DPI', () => {
   test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 
   test('retina displays load the 2560px tier and scrub correctly', async ({ page }) => {
+    // This runner reports 4 cores, which rightly triggers the low-end
+    // tier downgrade; spoof a normal laptop so the hidpi path itself
+    // stays under test.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+    });
     const frameRequests: string[] = [];
     page.on('request', (req) => {
       const url = req.url();

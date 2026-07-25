@@ -18,8 +18,13 @@ export default function App() {
   // (retina laptops, 4K monitors) get the high-DPI tier.
   const profile = useMemo<FrameProfile>(() => {
     if (window.matchMedia('(max-width: 820px)').matches) return 'mobile';
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const lowEnd =
+      (nav.deviceMemory !== undefined && nav.deviceMemory <= 4) ||
+      (navigator.hardwareConcurrency || 8) <= 4;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const physical = (window.devicePixelRatio || 1) * window.innerWidth;
-    return physical > 1920 ? 'hidpi' : 'desktop';
+    return physical > 1920 && !lowEnd && !reduceMotion ? 'hidpi' : 'desktop';
   }, []);
 
   const { storeRef, progress, ready } = useFrameStore(profile, true);
@@ -28,7 +33,7 @@ export default function App() {
 
   // Lenis smooth scroll, wired into GSAP's ticker
   useEffect(() => {
-    const lenis = new Lenis({ smoothWheel: true, duration: 1.05 });
+    const lenis = new Lenis({ smoothWheel: true, lerp: 0.12, syncTouch: false });
     lenis.on('scroll', ScrollTrigger.update);
     const raf = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(raf);

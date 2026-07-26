@@ -22,10 +22,15 @@ export interface FrameManifest {
   desktop: FrameSetInfo;
   hidpi: FrameSetInfo;
   mobile: FrameSetInfo;
+  /** centre-cropped to phone aspect: full source height, no side waste */
+  mobilePortrait: FrameSetInfo;
   zones: ZoneRange[];
 }
 
-export type FrameProfile = 'desktop' | 'hidpi' | 'mobile';
+export type FrameProfile = 'desktop' | 'hidpi' | 'mobile' | 'mobilePortrait';
+
+/** Both phone tiers share the mobile rendering rules (DPR cap 3, native decode). */
+export const isMobileProfile = (p: FrameProfile) => p === 'mobile' || p === 'mobilePortrait';
 
 export const FRAME_MANIFEST = manifest as unknown as FrameManifest;
 
@@ -69,7 +74,7 @@ export function useFrameStore(profile: FrameProfile, enabled: boolean) {
     // backing cap, which keeps the cover width above the tier's native
     // size in every orientation — phones always decode at native
     // resolution, feeding the high-DPI canvas the sharpest source.
-    const dpr = Math.min(window.devicePixelRatio || 1, profile === 'mobile' ? 3 : 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, isMobileProfile(profile) ? 3 : 1.5);
     const coverWidth = Math.ceil(
       Math.max(window.innerWidth, window.innerHeight * (info.width / info.height)) * dpr,
     );

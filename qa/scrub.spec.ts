@@ -9,6 +9,7 @@ interface Manifest {
   desktop: { count: number; width: number };
   hidpi: { count: number; width: number };
   mobile: { count: number; width: number };
+  mobilePortrait: { count: number; width: number };
   zones: { id: string; start: number; end: number }[];
 }
 
@@ -216,7 +217,7 @@ test('dive scrub: sustained frame rate during continuous scroll', async ({ page 
 test.describe('mobile', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-  test('phones load the lighter mobile frame set and scrub correctly', async ({ page }) => {
+  test('portrait phones load the centre-cropped portrait tier and scrub correctly', async ({ page }) => {
     const frameRequests: string[] = [];
     page.on('request', (req) => {
       const url = req.url();
@@ -225,15 +226,38 @@ test.describe('mobile', () => {
 
     await waitForStart(page);
 
-    const mobileHits = frameRequests.filter((u) => u.includes('/frames/mobile/')).length;
+    const portraitHits = frameRequests.filter((u) => u.includes('/frames/mobile-portrait/')).length;
+    const landscapeHits = frameRequests.filter((u) => /\/frames\/mobile\//.test(u)).length;
     const desktopHits = frameRequests.filter((u) => u.includes('/frames/desktop/')).length;
-    expect(mobileHits).toBe(manifest.mobile.count);
+    expect(portraitHits).toBe(manifest.mobilePortrait.count);
+    expect(landscapeHits).toBe(0);
     expect(desktopHits).toBe(0);
 
     await scrubTo(page, 0.5);
     const mag = (await page.locator('.hud__mag').textContent())?.trim() ?? '';
     expect(Number(mag.replace(/[×,]/g, ''))).toBeGreaterThan(60);
     await page.screenshot({ path: 'qa/mobile-050.png' });
+  });
+});
+
+test.describe('mobile landscape', () => {
+  // Width must stay under the 820px mobile breakpoint — larger
+  // landscape phones intentionally get the desktop tier.
+  test.use({ viewport: { width: 740, height: 360 }, isMobile: true, hasTouch: true });
+
+  test('landscape phones keep the 1440px landscape tier', async ({ page }) => {
+    const frameRequests: string[] = [];
+    page.on('request', (req) => {
+      const url = req.url();
+      if (url.includes('/frames/')) frameRequests.push(url);
+    });
+
+    await waitForStart(page);
+
+    const landscapeHits = frameRequests.filter((u) => /\/frames\/mobile\//.test(u)).length;
+    const portraitHits = frameRequests.filter((u) => u.includes('/frames/mobile-portrait/')).length;
+    expect(landscapeHits).toBe(manifest.mobile.count);
+    expect(portraitHits).toBe(0);
   });
 });
 

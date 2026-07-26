@@ -17,7 +17,12 @@ export default function App() {
   // displays that would show more than ~1920 physical pixels of frame
   // (retina laptops, 4K monitors) get the high-DPI tier.
   const profile = useMemo<FrameProfile>(() => {
-    if (window.matchMedia('(max-width: 820px)').matches) return 'mobile';
+    if (window.matchMedia('(max-width: 820px)').matches) {
+      // Portrait phones get the centre-cropped tier: full source height
+      // where the landscape tier only had 810px to stretch across the
+      // screen. Orientation is sampled once at load, like the profile.
+      return window.matchMedia('(orientation: portrait)').matches ? 'mobilePortrait' : 'mobile';
+    }
     const nav = navigator as Navigator & { deviceMemory?: number };
     const lowEnd =
       (nav.deviceMemory !== undefined && nav.deviceMemory <= 4) ||

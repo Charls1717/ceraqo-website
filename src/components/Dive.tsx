@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ZONES, magnificationAt, formatMagnification } from '../data/zones';
-import { FRAME_MANIFEST, type FrameProfile } from '../hooks/useFrameLoader';
+import { FRAME_MANIFEST, isMobileProfile, type FrameProfile } from '../hooks/useFrameLoader';
 import type { FrameStore } from '../lib/frameStore';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -121,7 +121,7 @@ export default function Dive({ storeRef, profile, active }: DiveProps) {
       cssH = stage.clientHeight;
       dpr = Math.min(
         window.devicePixelRatio || 1,
-        profile === 'mobile' ? MOBILE_DPR_CAP : DPR_CAP,
+        isMobileProfile(profile) ? MOBILE_DPR_CAP : DPR_CAP,
       );
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);

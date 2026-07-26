@@ -121,7 +121,9 @@
   position: sticky;
   top: 0;
   height: 100vh;
-  height: 100svh;
+  /* Large-viewport height: the stage must still fill the screen after
+     a phone's browser bar collapses mid-scroll (100svh left a gap). */
+  height: 100lvh;
   overflow: hidden;
   background: var(--c-stage);
 }

@@ -44,5 +44,11 @@
       "start": 388,
       "end": 484
     }
-  ]
+  ],
+  "mobilePortrait": {
+    "dir": "/frames/mobile-portrait",
+    "width": 748,
+    "height": 1620,
+    "count": 485
+  }
 }

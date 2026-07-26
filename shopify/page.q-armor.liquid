@@ -1,0 +1,56 @@
+{% comment %}
+  CERAQO Q-ARMOR — standalone immersive page template.
+
+  Install: Online Store > Themes > Edit code > Templates >
+  "Add a new template" > page, named "q-armor", type liquid — then
+  paste this file's entire contents. Create a page (Online Store >
+  Pages), assign template "page.q-armor", and open it.
+
+  Prerequisites (see README-SHOPIFY.md):
+    1. Everything in cdn-assets/ uploaded to the theme's Assets folder.
+    2. Everything in frames-upload/ uploaded to Content > Files with
+       names unchanged.
+
+  `layout none` gives the page a clean full-bleed canvas (no theme
+  header/footer). Note: theme-injected analytics/pixels do not load on
+  layout-none pages — add your tags below if needed.
+{% endcomment %}
+{% layout none %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1d201e" />
+    <title>{{ page.title | default: 'CERAQO™ Q-ARMOR — Advanced Surface Protection' }}</title>
+    <meta
+      name="description"
+      content="Not a wax. Not another ceramic coating. Q-ARMOR is a newly developed product that bonds covalently with your paint — professional-grade protection, self-applied. €169 per kit, produced in batches of 20,000 bottles."
+    />
+    <link rel="icon" type="image/svg+xml" href="{{ 'qa-favicon.svg' | asset_url }}" />
+    <style>
+      html { background: #1d201e; }
+    </style>
+    {{ 'qa-index.css' | asset_url | stylesheet_tag }}
+    <script>
+      // ── CONFIG ────────────────────────────────────────────────────
+      // 1) Frame images live in Content > Files (a flat namespace).
+      //    The CDN prefix is derived from one known upload, so this
+      //    template works unchanged on any shop:
+      {% assign qa_probe = 'qa-poster.webp' | file_url %}
+      window.QARMOR_ASSET_BASE = {{ qa_probe | split: 'qa-poster.webp' | first | json }};
+
+      // 2) THE PRE-ORDER LINK — the one line to edit when your
+      //    product exists. Every "Pre-order — €169" control on the
+      //    page becomes a direct link to it. A relative URL points at
+      //    this shop, e.g. '/products/q-armor'. Leave '' to keep the
+      //    disabled "opens shortly" state.
+      window.QARMOR_PREORDER_URL = '';
+      // ──────────────────────────────────────────────────────────────
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="{{ 'qa-index.js' | asset_url }}"></script>
+  </body>
+</html>

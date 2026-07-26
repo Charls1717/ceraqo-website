@@ -26,3 +26,7 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
+
+# local Shopify build artifacts
+dist-shopify/
+shopify-package/

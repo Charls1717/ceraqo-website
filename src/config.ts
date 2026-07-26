@@ -1,24 +1,31 @@
 /**
  * Commerce configuration.
  *
- * PREORDER_URL is the single switch between the email-reservation
- * fallback and a real checkout. Every "Pre-order — €169" control on
- * the site (the floating pill and the button in the Batch section)
- * reads this one value:
+ * PREORDER_URL is the single switch between the "pre-orders open
+ * shortly" state and a live checkout. Every "Pre-order — €169"
+ * control on the site reads this one value:
  *
- *   - '' (empty — the current state): buttons scroll to / submit the
- *     Batch 001 email-reservation form. No store required.
- *   - Once the Shopify store is ready (product added, domain
- *     connected, payments enabled — set up separately in Shopify),
- *     paste the product or checkout URL below, e.g.
- *       export const PREORDER_URL = 'https://shop.ceraqo.com/products/q-armor';
- *     and every pre-order control becomes a direct link to it.
- *     That is the entire migration — one line, no other code changes.
+ *   - '' (empty — the current state): buttons render the disabled
+ *     "opens shortly" state.
+ *   - Set to a product/checkout URL and every pre-order control
+ *     becomes a direct link to it. That is the entire migration.
  *
- * The URL can also be injected at build time without touching source:
- *   VITE_PREORDER_URL=https://... npm run build
- * (An explicit value here wins over the empty default; the env var
- * wins over everything when set.)
+ * Three ways to set it, in ascending precedence:
+ *   1. Edit the fallback below in source.
+ *   2. Build-time env var:  VITE_PREORDER_URL=https://... npm run build
+ *   3. Runtime global — FOR SHOPIFY: set it in the page template
+ *      BEFORE the app's <script> tag loads, e.g.
+ *        <script>window.QARMOR_PREORDER_URL = '/products/q-armor';</script>
+ *      No rebuild needed; a relative /products/... URL resolves to
+ *      the shop's own product page.
  */
+declare global {
+  interface Window {
+    QARMOR_PREORDER_URL?: string;
+  }
+}
+
 export const PREORDER_URL: string =
-  (import.meta.env.VITE_PREORDER_URL as string | undefined) ?? '';
+  (typeof window !== 'undefined' ? window.QARMOR_PREORDER_URL : undefined) ??
+  (import.meta.env.VITE_PREORDER_URL as string | undefined) ??
+  '';

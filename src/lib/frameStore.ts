@@ -1,4 +1,8 @@
 import { frameUrl, type FrameSetInfo } from '../hooks/useFrameLoader';
+// Inlined as a blob: the bundle may be served from a foreign CDN
+// (Shopify), and `new Worker(crossOriginUrl)` throws a SecurityError —
+// an inline worker has no origin to violate.
+import FrameWorker from './frameWorker?worker&inline';
 
 /**
  * Sliding-window ImageBitmap cache in front of the decode worker.
@@ -33,10 +37,14 @@ export class FrameStore {
 
   constructor(info: FrameSetInfo, resizeWidth?: number) {
     this.total = info.count;
-    const urls = Array.from({ length: info.count }, (_, i) => frameUrl(info.dir, i));
-    this.worker = new Worker(new URL('./frameWorker.ts', import.meta.url), {
-      type: 'module',
-    });
+    // Absolutized on the main thread: the inline (blob-URL) worker has
+    // no usable base URL, so a site-relative path would make every
+    // fetch throw before a single byte moves.
+    const urls = Array.from(
+      { length: info.count },
+      (_, i) => new URL(frameUrl(info.dir, i), window.location.href).href,
+    );
+    this.worker = new FrameWorker();
     this.worker.onmessage = (e) => {
       const m = e.data as
         | { type: 'progress'; loaded: number; total: number }
